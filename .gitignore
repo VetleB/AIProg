@@ -1,0 +1,5 @@
+mnist/*
+!mnist/mnist_basics.py
+.idea*
+
+*.txt
