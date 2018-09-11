@@ -3,7 +3,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as PLT
 import tflowtools as TFT
-from tensorflow.examples.tutorials.mnist import input_data
+import mnist.mnist_basics as mb
 
 from mnist import mnist_basics
 
@@ -142,16 +142,18 @@ class Layer():
 
 
 class Caseman():
-    def __init__(self, size, case, test_fraction=0.1, validation_fraction=0.1, train_fraction=0.8):
-        if case == 'one_hot':
-            self.cases = TFT.gen_all_one_hot_cases(size)
-        elif case == '':
-            pass
+    def __init__(self, size, case, test_fraction=0.1, validation_fraction=0.1):
+        self.case_generator = create_case_generator(case)
+
         self.test_fraction = test_fraction
         self.validation_fraction=validation_fraction
         self.train_fraction = 1-(validation_fraction+test_fraction)
-        #self.generate_cases()
+
+        self.set_up_case()
         self.organize_cases()
+
+    def set_up_case(self):
+
 
     def organize_cases(self):
         ca = np.array(self.cases)
@@ -168,6 +170,44 @@ class Caseman():
 
     def get_testing_cases(self): return self.test_cases
 
+
+def create_case_generator(case):
+    if case == 'parity':
+        case_gen = (lambda **kwargs: TFT.gen_all_parity_cases(**kwargs))
+    elif case == 'symmetry':
+        case_gen = (lambda **kwargs: TFT.gen_symvect_dataset(**kwargs))
+    elif case == 'auto':
+        case_gen = (lambda **kwargs: TFT.gen_all_one_hot_cases(**kwargs))
+    elif case == 'bit_count':
+        case_gen = (lambda **kwargs: TFT.gen_vector_count_cases(**kwargs))
+    elif case == 'segment_count':
+        case_gen = (lambda **kwargs: TFT.gen_segmented_vector_cases(**kwargs))
+    elif case == 'mnist':
+        case_gen = (lambda **kwargs: mb.load_mnist(**kwargs))
+    elif case in ['wine', 'yeast', 'glass']:
+        case_gen = (lambda **kwargs: get_all_irvine_cases(case=case, **kwargs))
+    elif case == 'hc':
+        #TODO: hacker's choice
+        #case_gen = (lambda kwargs: TFT.gen_vector_count_cases(**kwargs))
+        case_gen = create_case_generator('parity')
+    else:
+        raise ValueError('No such case')
+    return case_gen
+
+def get_all_irvine_cases(case='wine', **kwargs):
+    file_dict = {'wine': 'wine.txt',
+                 'yeast': 'yeast.txt',
+                 'glass': 'glass.txt'}
+    f = open(file_dict[case])
+    feature_target_vector = []
+    for line in f.readlines():
+        line = line.strip('\n')
+        nums = line.split(';') if case=='wine' else line.split(',')
+        features = [float(x) for x in nums[:-1]]
+        wine_class = [float(nums[-1])]
+        feature_target_vector.append([features, wine_class])
+    f.close()
+    return feature_target_vector
 
 def autoexec(nbits=4, epochs=300, lrate=0.03, mbs=None, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
     net = Network([2**nbits, nbits, 2**nbits], learn_rate=lrate, vfrac=vfrac, tfrac=tfrac, mbs=mbs, softmax=sm)
