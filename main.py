@@ -4,6 +4,7 @@ import math
 import matplotlib.pyplot as PLT
 import tflowtools as TFT
 import mnist.mnist_basics as mb
+import numpy.random as NPR
 
 from mnist import mnist_basics
 
@@ -142,24 +143,22 @@ class Layer():
 
 
 class Caseman():
-    def __init__(self, size, case, test_fraction=0.1, validation_fraction=0.1):
+    def __init__(self, case, test_fraction=0.1, validation_fraction=0.1):
         self.case_generator = create_case_generator(case)
+        self.cases = self.case_generator()
 
         self.test_fraction = test_fraction
         self.validation_fraction=validation_fraction
         self.train_fraction = 1-(validation_fraction+test_fraction)
 
-        self.set_up_case()
         self.organize_cases()
-
-    def set_up_case(self):
 
 
     def organize_cases(self):
         ca = np.array(self.cases)
-        np.random.shuffle(ca)
+        NPR.shuffle(ca)
         sep1 = round(len(self.cases)*self.test_fraction)
-        sep2 = round(len(self.cases)*self.validation_fraction)
+        sep2 = sep1 + round(len(self.cases)*self.validation_fraction)
         self.test_cases = ca[0:sep1]
         self.validation_cases = ca[sep1:sep2]
         self.train_cases = ca[sep2:]
@@ -173,19 +172,23 @@ class Caseman():
 
 def create_case_generator(case):
     if case == 'parity':
-        case_gen = (lambda **kwargs: TFT.gen_all_parity_cases(**kwargs))
+        case_gen = (lambda : TFT.gen_all_parity_cases(num_bits=10))
     elif case == 'symmetry':
-        case_gen = (lambda **kwargs: TFT.gen_symvect_dataset(**kwargs))
+        case_gen = (lambda : [[c[:-1], [c[-1]]] for c in TFT.gen_symvect_dataset(vlen=101, count=2000)])
     elif case == 'auto':
-        case_gen = (lambda **kwargs: TFT.gen_all_one_hot_cases(**kwargs))
+        case_gen = (lambda : TFT.gen_all_one_hot_cases(len=32))
     elif case == 'bit_count':
-        case_gen = (lambda **kwargs: TFT.gen_vector_count_cases(**kwargs))
+        case_gen = (lambda : TFT.gen_vector_count_cases(num=500, size=15))
     elif case == 'segment_count':
-        case_gen = (lambda **kwargs: TFT.gen_segmented_vector_cases(**kwargs))
+        case_gen = (lambda : TFT.gen_segmented_vector_cases(vectorlen=25, count=1000, minsegs=0, maxsegs=8))
     elif case == 'mnist':
-        case_gen = (lambda **kwargs: mb.load_mnist(**kwargs))
+        all_cases = [[c[:-1], [c[-1]]] for c in mb.load_all_flat_cases(unify=True)]
+        NPR.shuffle(all_cases)
+        cut_off = int(len(all_cases)/10)
+        fraction_of_cases = all_cases[:cut_off]
+        case_gen = (lambda : fraction_of_cases)
     elif case in ['wine', 'yeast', 'glass']:
-        case_gen = (lambda **kwargs: get_all_irvine_cases(case=case, **kwargs))
+        case_gen = (lambda : get_all_irvine_cases(case=case))
     elif case == 'hc':
         #TODO: hacker's choice
         #case_gen = (lambda kwargs: TFT.gen_vector_count_cases(**kwargs))
