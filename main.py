@@ -16,14 +16,15 @@ def main(dimensions, HAF, OAF, loss_function, learn_rate, IWR, optimizer, data_s
 
 class Network():
     # Set-up
-    def __init__(self, dims, learn_rate=0.01, mbs=10, vfrac=0.1, tfrac=0.1, softmax=True):
-        self.caseman = Caseman(dims[0], 'one_hot', test_fraction=tfrac, validation_fraction=vfrac)
+    def __init__(self, dims, learn_rate=0.01, mbs=10, vfrac=0.1, tfrac=0.1, haf=tf.nn.relu, oaf=tf.nn.softmax):
+        self.caseman = Caseman('parity', test_fraction=tfrac, validation_fraction=vfrac)
         self.learn_rate = learn_rate
         self.dims = dims
         self.grabvars = []
         self.global_training_step = 0
         self.minibatch_size = mbs if mbs else dims[0]
-        self.softmax = softmax
+        self.HAF = haf
+        self.OAF = oaf
         self.modules = []
         self.build()
 
@@ -37,14 +38,21 @@ class Network():
         self.input = tf.placeholder(tf.float64, shape=(None, num_inputs), name='input')
         invar = self.input
         insize=num_inputs
-        # Build layers
-        for i, outsize in enumerate(self.dims[1:]):
-            layer = Layer(self, i, invar, insize, outsize)
+
+        # Build hidden layers
+        for i, outsize in enumerate(self.dims[1:-1], 1):
+            layer = Layer(self, i, invar, insize, outsize, af=self.HAF)
             invar = layer.output
             insize = layer.outsize
+
+        # Build output layer
+        layer = Layer(self, len(self.dims), invar, insize, self.dims[-1], af=self.OAF)
+        invar = layer.output
+        insize = layer.outsize
+
         self.output = layer.output
-        if self.softmax:
-            self.output = tf.nn.softmax(self.output)
+        # if self.OAF:
+        #     self.output = tf.nn.softmax(self.output)
         self.target = tf.placeholder(tf.float64, shape=(None, layer.outsize), name='Target')
         self.configure_learning()
 
@@ -124,10 +132,11 @@ class Network():
 
 class Layer():
 
-    def __init__(self, network, index, invariable, insize, outsize):
+    def __init__(self, network, index, invariable, insize, outsize, af):
         self.network = network
         self.insize = insize
         self.outsize = outsize
+        self.AF = af
         self.input = invariable
         self.index = index
         self.name = "Module-"+str(index)
@@ -138,7 +147,7 @@ class Layer():
         n = self.outsize
         self.weights = tf.Variable(np.random.uniform(-.1, .1, size=(self.insize, n)), name=mona+'-wgt', trainable=True)
         self.biases = tf.Variable(np.random.uniform(-.1, .1, size=n), name=mona+'-bias', trainable=True)
-        self.output = tf.nn.relu(tf.matmul(self.input, self.weights)+self.biases, name=mona+'-out')
+        self.output = self.AF(tf.matmul(self.input, self.weights)+self.biases, name=mona+'-out')
         self.network.add_module(self)
 
 
