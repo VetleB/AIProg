@@ -157,6 +157,9 @@ def load_all_flat_cases(type='training',dir=__mnist_path__,unify=False):
     if unify: return unify_cases(pair[0],pair[1])
     else: return pair[0],pair[1]
 
+def load_all_flat_cases_ML(type='training',dir=__mnist_path__,unify=False):
+    return [[c[:-1], [c[-1]]] for c in load_all_flat_cases(type, dir, unify)]
+
 def quicktest(n = 99):
     cases = load_all_flat_cases()
     features,labels = cases

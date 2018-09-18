@@ -212,6 +212,10 @@ def gen_all_parity_cases(num_bits, double=True):
 
     return [[c, target(c)] for c in gen_all_bit_vectors(num_bits)]
 
+# Produces symmetry cases
+def gen_symmetry_cases(vlen, count):
+    return [[c[:-1], [c[-1]]] for c in gen_symvect_dataset(vlen=101, count=2000)]
+
 # This produces "count" cases, where features = random bit vectors and target = a one-hot vector indicating
 # the number of 1's in the feature vector(default) or simply the count label.  Note that the target vector is one bit
 # larger than the feature vector to account for the case of a zero-sum feature vector.

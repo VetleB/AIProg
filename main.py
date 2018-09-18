@@ -11,13 +11,17 @@ from mnist import mnist_basics
 def main(dimensions, HAF, OAF, loss_function, learn_rate, IWR, optimizer, data_source, case_fraction,
          validation_fraction, validation_interval, test_fraction, minibatch_size, map_batch_size, steps, layers,
          map_dendrograms, display_weights, display_biases):
-    pass
+    casefunc, kwargs = data_source
+    caseman = Caseman(casefunc, kwargs, case_fraction, test_fraction, validation_fraction)
+    net = Network(dimensions, caseman, learn_rate, minibatch_size, HAF, OAF, loss_function, optimizer)
+    net.run()
 
 
 class Network():
     # Set-up
-    def __init__(self, dims, learn_rate=0.01, mbs=10, vfrac=0.1, tfrac=0.1, haf=tf.nn.relu, oaf=tf.nn.softmax):
-        self.caseman = Caseman('parity', test_fraction=tfrac, validation_fraction=vfrac)
+    def __init__(self, dims, caseman, learn_rate=0.01, mbs=10, haf=tf.nn.relu, oaf=tf.nn.softmax,
+                 loss=tf.reduce_mean, optimizer=tf.train.GradientDescentOptimizer):
+        self.caseman = caseman
         self.learn_rate = learn_rate
         self.dims = dims
         self.grabvars = []
@@ -25,6 +29,8 @@ class Network():
         self.minibatch_size = mbs if mbs else dims[0]
         self.HAF = haf
         self.OAF = oaf
+        self.loss=loss
+        self.opt = optimizer
         self.modules = []
         self.build()
 
@@ -57,7 +63,12 @@ class Network():
         self.configure_learning()
 
     def configure_learning(self):
-        self.error = tf.reduce_mean(tf.square(self.target-self.output), name='MSE')
+        # Define loss function
+        if self.loss==tf.reduce_mean:
+            self.error = self.loss(tf.square(self.target-self.output), name='MSE')
+        else:
+            self.error = self.loss(tf.square(self.target - self.output), name='MSE')
+
         self.predictor = self.output
         optimizer = tf.train.GradientDescentOptimizer(self.learn_rate)
         self.trainer = optimizer.minimize(self.error, name='Backprop')
@@ -152,9 +163,9 @@ class Layer():
 
 
 class Caseman():
-    def __init__(self, case, test_fraction=0.1, validation_fraction=0.1):
-        self.case_generator = create_case_generator(case)
-        self.cases = self.case_generator()
+    def __init__(self, casefunc, kwargs, case_fraction, test_fraction=0.1, validation_fraction=0.1):
+        self.cases = casefunc(**kwargs)
+        self.case_fraction = case_fraction
 
         self.test_fraction = test_fraction
         self.validation_fraction=validation_fraction
@@ -165,9 +176,11 @@ class Caseman():
 
     def organize_cases(self):
         ca = np.array(self.cases)
-        NPR.shuffle(ca)
-        sep1 = round(len(self.cases)*self.test_fraction)
-        sep2 = sep1 + round(len(self.cases)*self.validation_fraction)
+        # NPR.shuffle(ca)
+        ca = ca[:round(self.case_fraction*len(ca))]
+        self.cases = ca
+        sep1 = round(len(ca)*self.test_fraction)
+        sep2 = sep1 + round(len(ca)*self.validation_fraction)
         self.test_cases = ca[0:sep1]
         self.validation_cases = ca[sep1:sep2]
         self.train_cases = ca[sep2:]
@@ -179,32 +192,32 @@ class Caseman():
     def get_testing_cases(self): return self.test_cases
 
 
-def create_case_generator(case):
-    if case == 'parity':
-        case_gen = (lambda : TFT.gen_all_parity_cases(num_bits=10))
-    elif case == 'symmetry':
-        case_gen = (lambda : [[c[:-1], [c[-1]]] for c in TFT.gen_symvect_dataset(vlen=101, count=2000)])
-    elif case == 'auto':
-        case_gen = (lambda : TFT.gen_all_one_hot_cases(len=32))
-    elif case == 'bit_count':
-        case_gen = (lambda : TFT.gen_vector_count_cases(num=500, size=15))
-    elif case == 'segment_count':
-        case_gen = (lambda : TFT.gen_segmented_vector_cases(vectorlen=25, count=1000, minsegs=0, maxsegs=8))
-    elif case == 'mnist':
-        all_cases = [[c[:-1], [c[-1]]] for c in mb.load_all_flat_cases(unify=True)]
-        NPR.shuffle(all_cases)
-        cut_off = int(len(all_cases)/10)
-        fraction_of_cases = all_cases[:cut_off]
-        case_gen = (lambda : fraction_of_cases)
-    elif case in ['wine', 'yeast', 'glass']:
-        case_gen = (lambda : get_all_irvine_cases(case=case))
-    elif case == 'hc':
-        #TODO: hacker's choice
-        #case_gen = (lambda kwargs: TFT.gen_vector_count_cases(**kwargs))
-        case_gen = create_case_generator('parity')
-    else:
-        raise ValueError('No such case')
-    return case_gen
+# def create_case_generator(case):
+#     if case == 'parity':
+#         case_gen = (lambda : TFT.gen_all_parity_cases(num_bits=10))
+#     elif case == 'symmetry':
+#         case_gen = (lambda : [[c[:-1], [c[-1]]] for c in TFT.gen_symvect_dataset(vlen=101, count=2000)])
+#     elif case == 'auto':
+#         case_gen = (lambda : TFT.gen_all_one_hot_cases(len=32))
+#     elif case == 'bit_count':
+#         case_gen = (lambda : TFT.gen_vector_count_cases(num=500, size=15))
+#     elif case == 'segment_count':
+#         case_gen = (lambda : TFT.gen_segmented_vector_cases(vectorlen=25, count=1000, minsegs=0, maxsegs=8))
+#     elif case == 'mnist':
+#         all_cases = [[c[:-1], [c[-1]]] for c in mb.load_all_flat_cases(unify=True)]
+#         NPR.shuffle(all_cases)
+#         cut_off = int(len(all_cases)/10)
+#         fraction_of_cases = all_cases[:cut_off]
+#         case_gen = (lambda : fraction_of_cases)
+#     elif case in ['wine', 'yeast', 'glass']:
+#         case_gen = (lambda : get_all_irvine_cases(case=case))
+#     elif case == 'hc':
+#         #TODO: hacker's choice
+#         #case_gen = (lambda kwargs: TFT.gen_vector_count_cases(**kwargs))
+#         case_gen = create_case_generator('parity')
+#     else:
+#         raise ValueError('No such case')
+#     return case_gen
 
 def get_all_irvine_cases(case='wine', **kwargs):
     file_dict = {'wine': 'wine.txt',
@@ -221,6 +234,7 @@ def get_all_irvine_cases(case='wine', **kwargs):
     f.close()
     return feature_target_vector
 
-def autoexec(nbits=4, epochs=300, lrate=0.03, mbs=None, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
-    net = Network([2**nbits, nbits, 2**nbits], learn_rate=lrate, vfrac=vfrac, tfrac=tfrac, mbs=mbs, softmax=sm)
+def autoexec(epochs=300, lrate=0.03, mbs=None, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
+    caseman = Caseman('bit_count', test_fraction=tfrac, validation_fraction=vfrac)
+    net = Network([15, 4, 16], caseman, learn_rate=lrate, mbs=mbs, vfrac=vfrac, tfrac=tfrac)
     net.run(epochs, bestk=bestk)
