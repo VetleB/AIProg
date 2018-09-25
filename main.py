@@ -5,6 +5,7 @@ import matplotlib.pyplot as PLT
 import tflowtools as TFT
 import mnist.mnist_basics as mb
 import numpy.random as NPR
+import os
 
 from mnist import mnist_basics
 
@@ -13,25 +14,31 @@ def main(dimensions, HAF, OAF, loss_function, learn_rate, IWR, optimizer, data_s
          map_dendrograms, display_weights, display_biases):
     casefunc, kwargs = data_source
     caseman = Caseman(casefunc, kwargs, case_fraction, test_fraction, validation_fraction)
-    net = Network(dimensions, caseman, learn_rate, minibatch_size, HAF, OAF, loss_function, optimizer)
+    net = Network(dimensions, caseman, steps, learn_rate, minibatch_size, HAF, OAF, loss_function, optimizer,
+                  validation_interval, map_batch_size)
     net.run()
 
 
 class Network():
     # Set-up
-    def __init__(self, dims, caseman, learn_rate=0.01, mbs=10, haf=tf.nn.relu, oaf=tf.nn.softmax,
-                 loss=tf.reduce_mean, optimizer=tf.train.GradientDescentOptimizer):
+    def __init__(self, dims, caseman, steps, learn_rate=0.01, mbs=10, haf=tf.nn.relu, oaf=tf.nn.softmax,
+                 loss=tf.reduce_mean, optimizer=tf.train.GradientDescentOptimizer, vint=None, mb_size=0):
         self.caseman = caseman
         self.learn_rate = learn_rate
         self.dims = dims
         self.grabvars = []
+        self.steps = steps
         self.global_training_step = 0
         self.minibatch_size = mbs if mbs else dims[0]
         self.HAF = haf
         self.OAF = oaf
-        self.loss=loss
-        self.opt = optimizer
+        self.loss_func = loss
+        self.opt = optimizer(learning_rate=learn_rate)
+        self.validation_interval = vint
+        self.map_batch_size = mb_size
         self.modules = []
+        self.current_session = None
+        self.log_dir = ""
         self.build()
 
     def add_module(self, module):
@@ -40,6 +47,10 @@ class Network():
     # Create network
     def build(self):
         tf.reset_default_graph()
+
+        self.current_session = TFT.gen_initialized_session(dir=dir)
+        self.writer = tf.summary.FileWriter(self.log_dir, graph=self.current_session.graph)
+
         num_inputs = self.dims[0]
         self.input = tf.placeholder(tf.float64, shape=(None, num_inputs), name='input')
         invar = self.input
@@ -52,7 +63,7 @@ class Network():
             insize = layer.outsize
 
         # Build output layer
-        layer = Layer(self, len(self.dims), invar, insize, self.dims[-1], af=self.OAF)
+        layer = Layer(self, len(self.dims)-1, invar, insize, self.dims[-1], af=self.OAF, name='output')
         invar = layer.output
         insize = layer.outsize
 
@@ -64,40 +75,71 @@ class Network():
 
     def configure_learning(self):
         # Define loss function
-        if self.loss==tf.reduce_mean:
-            self.error = self.loss(tf.square(self.target-self.output), name='MSE')
+        if self.loss_func==tf.reduce_mean:
+            self.error = self.loss_func(tf.square(self.target - self.output), name='MSE')
         else:
-            self.error = self.loss(tf.square(self.target - self.output), name='MSE')
+            self.error = self.loss_func(tf.square(self.target - self.output), name='MSE')
+
+
+        tf.scalar_summary("error", self.error)
 
         self.predictor = self.output
         optimizer = tf.train.GradientDescentOptimizer(self.learn_rate)
         self.trainer = optimizer.minimize(self.error, name='Backprop')
 
     # Do training
-    def do_training(self, sess, cases, epochs=100, continued=False):
+    def do_training(self, sess, cases, continued=False):
         if not(continued): self.error_history = []
-        for i in range(epochs):
+        trainables = tf.trainable_variables()
+
+        acc_vars = [tf.Variable(trainable.initialized_value(), trainable=False) for trainable in trainables]
+
+        zeros = [trainable.assign(tf.zeros_like(trainable)) for trainable in acc_vars]
+
+        gradients = self.opt.compute_gradients(loss=self.error)
+
+        acc_ops = [acc_vars[i].assign_add(gradient[0]) for i, gradient in enumerate(gradients)]
+
+        apply = self.opt.apply_gradients([(acc_vars[i], trainable) for i, trainable in enumerate(tf.trainable_variables())])
+
+        steps_left = self.steps
+        num_mb = len(self.caseman.get_training_cases()) // self.minibatch_size
+        step = 0
+
+        while steps_left > 0:
+            num_mb = num_mb if steps_left > self.minibatch_size else steps_left
             error = 0
-            step = self.global_training_step + i
+
             gvars = [self.error]
-            mbs = self.minibatch_size
-            ncases = len(cases)
-            nmb=math.ceil(ncases/mbs)
-            for cstart in range(0, ncases, mbs):
-                cend = min(ncases, cstart+mbs)
-                minibatch = cases[cstart:cend]
+
+            sess.run(zeros)
+
+            for j in range(num_mb):
+                NPR.shuffle(cases)
+                minibatch = cases[0:self.minibatch_size]
+
                 inputs = [c[0] for c in minibatch]
                 targets = [c[1] for c in minibatch]
                 feeder = {self.input: inputs, self.target: targets}
-                _,grabvals,_ = self.run_one_step([self.trainer], gvars, session=sess, feed_dict=feeder, step=step)
-                error += grabvals[0]
-            self.error_history.append((step, error/nmb))
-        self.global_training_step += epochs
 
-    def training_session(self, epochs, sess=None, dir='probeview', continued=False):
+                _,grabvals,_ = self.run_one_step([acc_ops], gvars, session=sess, feed_dict=feeder, step=step)
+                error += grabvals[0]
+                if ((step+j)%self.validation_interval==0):
+                    print('error:', error)
+
+            sess.run([apply])
+            # self.run_one_step([apply])
+
+            step += num_mb
+            avg_error = error/self.minibatch_size
+            self.error_history.append((step, avg_error))
+
+            steps_left -= num_mb
+        self.global_training_step += step
+
+    def training_session(self, sess=None, dir='probeview', continued=False):
         session = sess if sess else TFT.gen_initialized_session(dir=dir)
-        self.current_session = session
-        self.do_training(session, self.caseman.get_training_cases(), epochs, continued)
+        self.do_training(session, self.caseman.get_training_cases(), continued)
 
     # Do testing
     def do_testing(self, sess, cases, msg='Testing', bestk=None):
@@ -134,8 +176,10 @@ class Network():
 
         return results[0], results[1], sess
 
-    def run(self, epochs=100, sess=None, continued=False, bestk=None):
-        self.training_session(epochs, sess=sess, continued=continued)
+    def run(self, sess=None, continued=False, bestk=None, dir='probeview'):
+        session = sess if sess else TFT.gen_initialized_session(dir=dir)
+        self.current_session = session
+        self.training_session(sess=self.current_session, continued=continued)
         self.test_on_trains(sess=self.current_session, bestk=bestk)
         self.testing_session(sess=self.current_session, bestk=bestk)
         #self.close_current_session(view=False)
@@ -143,14 +187,14 @@ class Network():
 
 class Layer():
 
-    def __init__(self, network, index, invariable, insize, outsize, af):
+    def __init__(self, network, index, invariable, insize, outsize, af, name=None):
         self.network = network
         self.insize = insize
         self.outsize = outsize
         self.AF = af
         self.input = invariable
         self.index = index
-        self.name = "Module-"+str(index)
+        self.name = 'module-'+str(index) if name is None else name
         self.build()
 
     def build(self):
@@ -163,7 +207,7 @@ class Layer():
 
 
 class Caseman():
-    def __init__(self, casefunc, kwargs, case_fraction, test_fraction=0.1, validation_fraction=0.1):
+    def __init__(self, casefunc, kwargs, case_fraction=1, test_fraction=0.1, validation_fraction=0.1):
         self.cases = casefunc(**kwargs)
         self.case_fraction = case_fraction
 
@@ -234,7 +278,12 @@ def get_all_irvine_cases(case='wine', **kwargs):
     f.close()
     return feature_target_vector
 
-def autoexec(epochs=300, lrate=0.03, mbs=None, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
-    caseman = Caseman('bit_count', test_fraction=tfrac, validation_fraction=vfrac)
-    net = Network([15, 4, 16], caseman, learn_rate=lrate, mbs=mbs, vfrac=vfrac, tfrac=tfrac)
-    net.run(epochs, bestk=bestk)
+
+def autoexec(steps=5000, lrate=0.03, mbs=32, casefunc=TFT.gen_vector_count_cases, kwargs={'num':1000, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
+    os.system('del /Q /F .\probeview')
+    caseman = Caseman(casefunc, kwargs, test_fraction=tfrac, validation_fraction=vfrac)
+    net = Network([15, 4, 16], caseman, steps, learn_rate=lrate, mbs=mbs, vint=1000)
+    net.run(bestk=bestk)
+    os.system('start chrome http://desktop-1vusl9o:6006')
+    os.system('tensorboard --logdir=probeview')
+
