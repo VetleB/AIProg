@@ -38,8 +38,9 @@ class Network():
         self.map_batch_size = mb_size
         self.modules = []
         self.current_session = None
-        self.log_dir = ""
+        self.log_dir = "probeview"
         self.build()
+
 
     def add_module(self, module):
         self.modules.append(module)
@@ -48,7 +49,7 @@ class Network():
     def build(self):
         tf.reset_default_graph()
 
-        self.current_session = TFT.gen_initialized_session(dir=dir)
+        self.current_session = TFT.gen_initialized_session(dir=self.log_dir)
         self.writer = tf.summary.FileWriter(self.log_dir, graph=self.current_session.graph)
 
         num_inputs = self.dims[0]
@@ -58,14 +59,14 @@ class Network():
 
         # Build hidden layers
         for i, outsize in enumerate(self.dims[1:-1], 1):
-            layer = Layer(self, i, invar, insize, outsize, af=self.HAF)
-            invar = layer.output
-            insize = layer.outsize
+            with tf.name_scope('hidden-'+str(i)):
+                layer = Layer(self, i, invar, insize, outsize, af=self.HAF)
+                invar = layer.output
+                insize = layer.outsize
 
         # Build output layer
-        layer = Layer(self, len(self.dims)-1, invar, insize, self.dims[-1], af=self.OAF, name='output')
-        invar = layer.output
-        insize = layer.outsize
+        with tf.name_scope('output'):
+            layer = Layer(self, 'output', invar, insize, self.dims[-1], af=self.OAF, name='output')
 
         self.output = layer.output
         # if self.OAF:
@@ -73,15 +74,16 @@ class Network():
         self.target = tf.placeholder(tf.float64, shape=(None, layer.outsize), name='Target')
         self.configure_learning()
 
+        self.merge_all = tf.summary.merge_all()
+
     def configure_learning(self):
         # Define loss function
-        if self.loss_func==tf.reduce_mean:
-            self.error = self.loss_func(tf.square(self.target - self.output), name='MSE')
-        else:
-            self.error = self.loss_func(tf.square(self.target - self.output), name='MSE')
-
-
-        tf.scalar_summary("error", self.error)
+        with tf.name_scope('error'):
+            if self.loss_func==tf.reduce_mean:
+                self.error = self.loss_func(tf.square(self.target - self.output), name='MSE')
+            else:
+                self.error = self.loss_func(tf.square(self.target - self.output), name='MSE')
+            summary(self.error)
 
         self.predictor = self.output
         optimizer = tf.train.GradientDescentOptimizer(self.learn_rate)
@@ -122,7 +124,9 @@ class Network():
                 targets = [c[1] for c in minibatch]
                 feeder = {self.input: inputs, self.target: targets}
 
-                _,grabvals,_ = self.run_one_step([acc_ops], gvars, session=sess, feed_dict=feeder, step=step)
+                summary,acc,grabvals = self.current_session.run([self.merge_all, acc_ops, gvars], feed_dict=feeder)
+                self.writer.add_summary(summary, step+j)
+                #_,grabvals,sess = self.run_one_step([self.merge_all, acc_ops], gvars, session=sess, feed_dict=feeder, step=step)
                 error += grabvals[0]
                 if ((step+j)%self.validation_interval==0):
                     print('error:', error)
@@ -137,8 +141,8 @@ class Network():
             steps_left -= num_mb
         self.global_training_step += step
 
-    def training_session(self, sess=None, dir='probeview', continued=False):
-        session = sess if sess else TFT.gen_initialized_session(dir=dir)
+    def training_session(self, sess=None, continued=False):
+        session = sess if sess else TFT.gen_initialized_session(dir=self.log_dir)
         self.do_training(session, self.caseman.get_training_cases(), continued)
 
     # Do testing
@@ -169,21 +173,28 @@ class Network():
         return tf.reduce_sum(tf.cast(correct, tf.int32))
 
     # Run
-    def run_one_step(self, operators, grabbed_vars=None, dir='probeview', session=None, feed_dict=None, step=1, show_interval=1):
-        sess = session if session else TFT.gen_initialized_session(dir=dir)
+    def run_one_step(self, operators, grabbed_vars=None, session=None, feed_dict=None, step=1, show_interval=1):
+        sess = session if session else TFT.gen_initialized_session(dir=self.log_dir)
 
         results = sess.run([operators, grabbed_vars], feed_dict=feed_dict)
 
         return results[0], results[1], sess
 
-    def run(self, sess=None, continued=False, bestk=None, dir='probeview'):
-        session = sess if sess else TFT.gen_initialized_session(dir=dir)
+    def run(self, sess=None, continued=False, bestk=None):
+        session = sess if sess else TFT.gen_initialized_session(dir=self.log_dir)
         self.current_session = session
         self.training_session(sess=self.current_session, continued=continued)
         self.test_on_trains(sess=self.current_session, bestk=bestk)
         self.testing_session(sess=self.current_session, bestk=bestk)
         #self.close_current_session(view=False)
-    # Graph stuff
+
+# Graph stuff
+def summary(variable):
+    with tf.name_scope('summary'):
+        mean = tf.reduce_mean(variable)
+        tf.summary.scalar('mean', mean)
+
+
 
 class Layer():
 
@@ -200,9 +211,15 @@ class Layer():
     def build(self):
         mona = self.name
         n = self.outsize
-        self.weights = tf.Variable(np.random.uniform(-.1, .1, size=(self.insize, n)), name=mona+'-wgt', trainable=True)
-        self.biases = tf.Variable(np.random.uniform(-.1, .1, size=n), name=mona+'-bias', trainable=True)
-        self.output = self.AF(tf.matmul(self.input, self.weights)+self.biases, name=mona+'-out')
+        with tf.name_scope('weights-'+str(self.index)):
+            self.weights = tf.Variable(np.random.uniform(-.1, .1, size=(self.insize, n)), name=mona+'-wgt', trainable=True)
+            summary(self.weights)
+        with tf.name_scope('biases-'+str(self.index)):
+            self.biases = tf.Variable(np.random.uniform(-.1, .1, size=n), name=mona+'-bias', trainable=True)
+            summary(self.biases)
+        with tf.name_scope('act_func-'+str(self.index)):
+            self.output = self.AF(tf.matmul(self.input, self.weights)+self.biases, name=mona+'-out')
+            summary(self.output)
         self.network.add_module(self)
 
 
@@ -285,5 +302,5 @@ def autoexec(steps=5000, lrate=0.03, mbs=32, casefunc=TFT.gen_vector_count_cases
     net = Network([15, 4, 16], caseman, steps, learn_rate=lrate, mbs=mbs, vint=1000)
     net.run(bestk=bestk)
     os.system('start chrome http://desktop-1vusl9o:6006')
-    os.system('tensorboard --logdir=probeview')
+    os.system('tensorboard --logdir=D:\\Utvikling\AIProg\probeview')
 
