@@ -21,8 +21,9 @@ def main(dimensions, HAF, OAF, loss_function, learn_rate, IWR, optimizer, data_s
 
 class Network():
     # Set-up
-    def __init__(self, dims, caseman, steps, learn_rate=0.01, mbs=10, haf=tf.nn.relu, oaf=tf.nn.softmax,
-                 loss=tf.reduce_mean, optimizer=tf.train.GradientDescentOptimizer, vint=None, mb_size=0):
+    def __init__(self, dims, caseman, steps, learn_rate=0.01, mbs=10, haf=tf.nn.relu, oaf=tf.nn.relu,
+                 softmax=True, loss=tf.reduce_mean, optimizer=tf.train.GradientDescentOptimizer,
+                 vint=None, mb_size=0):
         self.caseman = caseman
         self.learn_rate = learn_rate
         self.dims = dims
@@ -32,6 +33,7 @@ class Network():
         self.minibatch_size = mbs if mbs else dims[0]
         self.HAF = haf
         self.OAF = oaf
+        self.softmax = softmax
         self.loss_func = loss
         self.opt = optimizer(learning_rate=learn_rate)
         self.validation_interval = vint
@@ -49,7 +51,8 @@ class Network():
     def build(self):
         tf.reset_default_graph()
 
-        self.current_session = TFT.gen_initialized_session(dir=self.log_dir)
+        #self.current_session = TFT.gen_initialized_session(dir=self.log_dir)
+        self.current_session = tf.Session()
         self.writer = tf.summary.FileWriter(self.log_dir, graph=self.current_session.graph)
 
         num_inputs = self.dims[0]
@@ -69,6 +72,8 @@ class Network():
             layer = Layer(self, 'output', invar, insize, self.dims[-1], af=self.OAF, name='output')
 
         self.output = layer.output
+        if self.softmax: self.output = tf.nn.softmax(self.output)
+
         # if self.OAF:
         #     self.output = tf.nn.softmax(self.output)
         self.target = tf.placeholder(tf.float64, shape=(None, layer.outsize), name='Target')
@@ -107,6 +112,7 @@ class Network():
         steps_left = self.steps
         num_mb = len(self.caseman.get_training_cases()) // self.minibatch_size
         step = 0
+        show_step = 0
 
         while steps_left > 0:
             num_mb = num_mb if steps_left > self.minibatch_size else steps_left
@@ -117,28 +123,35 @@ class Network():
             sess.run(zeros)
 
             for j in range(num_mb):
-                NPR.shuffle(cases)
+                #NPR.shuffle(cases)
                 minibatch = cases[0:self.minibatch_size]
 
                 inputs = [c[0] for c in minibatch]
                 targets = [c[1] for c in minibatch]
                 feeder = {self.input: inputs, self.target: targets}
 
-                summary,acc,grabvals = self.current_session.run([self.merge_all, acc_ops, gvars], feed_dict=feeder)
+                summary,result,grabvals = self.current_session.run([self.merge_all, self.trainer, gvars], feed_dict=feeder)
+
                 self.writer.add_summary(summary, step+j)
                 #_,grabvals,sess = self.run_one_step([self.merge_all, acc_ops], gvars, session=sess, feed_dict=feeder, step=step)
                 error += grabvals[0]
                 if ((step+j)%self.validation_interval==0):
-                    print('error:', error)
+                    pass
+                    #print('error:', error)
+                show_step += 1
 
-            sess.run([apply])
+            #sess.run([apply])
             # self.run_one_step([apply])
 
             step += num_mb
             avg_error = error/self.minibatch_size
+            if show_step > self.validation_interval:
+                print(avg_error)
+                show_step = 0
             self.error_history.append((step, avg_error))
 
             steps_left -= num_mb
+        print(self.error_history[-1])
         self.global_training_step += step
 
     def training_session(self, sess=None, continued=False):
@@ -181,6 +194,7 @@ class Network():
         return results[0], results[1], sess
 
     def run(self, sess=None, continued=False, bestk=None):
+        tf.global_variables_initializer()
         session = sess if sess else TFT.gen_initialized_session(dir=self.log_dir)
         self.current_session = session
         self.training_session(sess=self.current_session, continued=continued)
@@ -296,11 +310,13 @@ def get_all_irvine_cases(case='wine', **kwargs):
     return feature_target_vector
 
 
-def autoexec(steps=5000, lrate=0.03, mbs=32, casefunc=TFT.gen_vector_count_cases, kwargs={'num':1000, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
+def autoexec(steps=50000, lrate=0.1, mbs=64, casefunc=TFT.gen_vector_count_cases, kwargs={'num':1000, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
     os.system('del /Q /F .\probeview')
     caseman = Caseman(casefunc, kwargs, test_fraction=tfrac, validation_fraction=vfrac)
-    net = Network([15, 4, 16], caseman, steps, learn_rate=lrate, mbs=mbs, vint=1000)
+    net = Network([15, 20, 16], caseman, steps, learn_rate=lrate, mbs=mbs, vint=5000)
     net.run(bestk=bestk)
-    os.system('start chrome http://desktop-1vusl9o:6006')
-    os.system('tensorboard --logdir=D:\\Utvikling\AIProg\probeview')
-
+    #Desktop
+    #os.system('start chrome http://desktop-1vusl9o:6006
+    #Laptop
+    #os.system('start chrome http://DESKTOP-D5MC4MC:6006')
+    #os.system('tensorboard --logdir=probeview')
