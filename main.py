@@ -22,7 +22,7 @@ def main(dimensions, HAF, OAF, loss_function, learn_rate, IWR, optimizer, data_s
 class Network():
     # Set-up
     def __init__(self, dims, caseman, steps, learn_rate=0.01, mbs=10, haf=tf.nn.relu, oaf=tf.nn.relu,
-                 softmax=True, loss=tf.reduce_mean, optimizer=tf.train.GradientDescentOptimizer,
+                 softmax=True, loss='mse', optimizer=tf.train.GradientDescentOptimizer,
                  vint=None, mb_size=0):
         self.caseman = caseman
         self.learn_rate = learn_rate
@@ -39,6 +39,7 @@ class Network():
         self.bestk=1
         self.error = 0
         self.error_history = []
+        self.accuracy_history = []
         self.validation_interval = vint
         self.map_batch_size = mb_size
         self.modules = []
@@ -75,7 +76,7 @@ class Network():
             layer = Layer(self, 'output', invar, insize, self.dims[-1], af=self.OAF, name='output')
 
         self.output = layer.output
-        if self.softmax: self.output = tf.nn.softmax(self.output)
+        if self.softmax and not self.loss_func=='x_entropy': self.output = tf.nn.softmax(self.output)
 
         # if self.OAF:
         #     self.output = tf.nn.softmax(self.output)
@@ -87,10 +88,10 @@ class Network():
     def configure_learning(self):
         # Define loss function
         with tf.name_scope('error'):
-            if self.loss_func==tf.reduce_mean:
-                self.error = self.loss_func(tf.square(self.target - self.output), name='MSE')
-            else:
-                self.error = self.loss_func(tf.square(self.target - self.output), name='MSE')
+            if self.loss_func=='mse':
+                self.error = tf.nn.reduce_mean(tf.squared_difference(self.target, self.output), name='MSE')
+            elif self.loss_func=='x_entropy':
+                self.error = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.target, logits=self.output, name='MSE')
             summary(self.error)
 
         self.predictor = self.output
@@ -136,6 +137,7 @@ class Network():
                 summary,result,grabvals = self.current_session.run([self.merge_all, self.trainer, gvars], feed_dict=feeder)
                 self.writer.add_summary(summary, step+j)
                 #_,grabvals,sess = self.run_one_step([self.merge_all, acc_ops], gvars, session=sess, feed_dict=feeder, step=step)
+                #print(grabvals[0])
                 error += grabvals[0]
                 #print(j, error)
                 if ((step+j)%self.validation_interval==0):
@@ -149,8 +151,10 @@ class Network():
             step += num_mb
             avg_error = error/num_mb
             if show_step > self.validation_interval:
-                self.test_on_trains(sess=self.current_session, bestk=self.bestk)
+                correct = self.test_on_trains(sess=self.current_session, bestk=self.bestk)
                 show_step = 0
+                acc = correct/len(self.caseman.get_training_cases())
+                self.accuracy_history.append((step, acc))
             self.error_history.append((step, avg_error))
 
             steps_left -= num_mb
@@ -174,7 +178,8 @@ class Network():
         if bestk is None:
             print('%s Set error = %f' % (msg, testres))
         else:
-            print('%s Set correct classification = %f %%' % (msg, 100*(testres/len(cases))))
+            acc = 100*(testres/len(cases))
+            print('%s Set correct classification = %f %%' % (msg, acc))
         return testres
 
     def testing_session(self, sess, bestk=None):
@@ -183,7 +188,7 @@ class Network():
             self.do_testing(sess, cases, msg='Final testing', bestk=bestk)
 
     def test_on_trains(self, sess, bestk=None):
-        self.do_testing(sess, self.caseman.get_training_cases(), msg='Total training', bestk=bestk)
+        return self.do_testing(sess, self.caseman.get_training_cases(), msg='Total training', bestk=bestk)
 
     def gen_match_counter(self, logits, labels, k=1):
         correct = tf.nn.in_top_k(tf.cast(logits, tf.float32), labels, k)
@@ -314,11 +319,14 @@ def get_all_irvine_cases(case='wine', **kwargs):
     return feature_target_vector
 
 
-def autoexec(steps=50000, lrate=0.05, mbs=64, casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
+def autoexec(steps=50000, lrate=0.05, mbs=64, loss='mse', casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
     os.system('del /Q /F .\probeview')
     caseman = Caseman(casefunc, kwargs, test_fraction=tfrac, validation_fraction=vfrac)
-    net = Network([15, 20, 16], caseman, steps, learn_rate=lrate, mbs=mbs, vint=5000)
+    net = Network([15, 20, 16], caseman, steps, learn_rate=lrate, mbs=mbs, vint=5000, loss=loss)
     net.run(bestk=bestk)
+    TFT.plot_training_history(net.error_history)
+    TFT.plot_training_history(net.accuracy_history, ytitle='% correct', title='Accuracy')
+    PLT.show()
     #Desktop
     #os.system('start chrome http://desktop-1vusl9o:6006
     #Laptop
