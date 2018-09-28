@@ -89,9 +89,11 @@ class Network():
         # Define loss function
         with tf.name_scope('error'):
             if self.loss_func=='mse':
-                self.error = tf.nn.reduce_mean(tf.squared_difference(self.target, self.output), name='MSE')
+                self.error = tf.reduce_mean(tf.squared_difference(self.target, self.output), name='MSE')
+                self.post_run_error_handling = lambda x : x
             elif self.loss_func=='x_entropy':
                 self.error = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.target, logits=self.output, name='MSE')
+                self.post_run_error_handling = lambda l : sum(l)
             summary(self.error)
 
         self.predictor = self.output
@@ -138,7 +140,7 @@ class Network():
                 self.writer.add_summary(summary, step+j)
                 #_,grabvals,sess = self.run_one_step([self.merge_all, acc_ops], gvars, session=sess, feed_dict=feeder, step=step)
                 #print(grabvals[0])
-                error += grabvals[0]
+                error += self.post_run_error_handling(grabvals[0])
                 #print(j, error)
                 if ((step+j)%self.validation_interval==0):
                     pass
