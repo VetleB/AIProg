@@ -36,6 +36,9 @@ class Network():
         self.softmax = softmax
         self.loss_func = loss
         self.opt = optimizer(learning_rate=learn_rate)
+        self.bestk=1
+        self.error = 0
+        self.error_history = []
         self.validation_interval = vint
         self.map_batch_size = mb_size
         self.modules = []
@@ -123,7 +126,7 @@ class Network():
             sess.run(zeros)
 
             for j in range(num_mb):
-                #NPR.shuffle(cases)
+                NPR.shuffle(cases)
                 minibatch = cases[0:self.minibatch_size]
 
                 inputs = [c[0] for c in minibatch]
@@ -131,10 +134,10 @@ class Network():
                 feeder = {self.input: inputs, self.target: targets}
 
                 summary,result,grabvals = self.current_session.run([self.merge_all, self.trainer, gvars], feed_dict=feeder)
-
                 self.writer.add_summary(summary, step+j)
                 #_,grabvals,sess = self.run_one_step([self.merge_all, acc_ops], gvars, session=sess, feed_dict=feeder, step=step)
                 error += grabvals[0]
+                #print(j, error)
                 if ((step+j)%self.validation_interval==0):
                     pass
                     #print('error:', error)
@@ -144,9 +147,9 @@ class Network():
             # self.run_one_step([apply])
 
             step += num_mb
-            avg_error = error/self.minibatch_size
+            avg_error = error/num_mb
             if show_step > self.validation_interval:
-                print(avg_error)
+                self.test_on_trains(sess=self.current_session, bestk=self.bestk)
                 show_step = 0
             self.error_history.append((step, avg_error))
 
@@ -167,6 +170,7 @@ class Network():
         if bestk is not None:
             self.test_func = self.gen_match_counter(self.predictor, [TFT.one_hot_to_int(list(v)) for v in targets], k=bestk)
         testres, grabvals, _ = self.run_one_step(self.test_func, self.grabvars, session=sess, feed_dict=feeder)
+        #print(testres)
         if bestk is None:
             print('%s Set error = %f' % (msg, testres))
         else:
@@ -199,7 +203,7 @@ class Network():
         self.current_session = session
         self.training_session(sess=self.current_session, continued=continued)
         self.test_on_trains(sess=self.current_session, bestk=bestk)
-        self.testing_session(sess=self.current_session, bestk=bestk)
+        #self.testing_session(sess=self.current_session, bestk=bestk)
         #self.close_current_session(view=False)
 
 # Graph stuff
@@ -310,7 +314,7 @@ def get_all_irvine_cases(case='wine', **kwargs):
     return feature_target_vector
 
 
-def autoexec(steps=50000, lrate=0.1, mbs=64, casefunc=TFT.gen_vector_count_cases, kwargs={'num':1000, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
+def autoexec(steps=50000, lrate=0.05, mbs=64, casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
     os.system('del /Q /F .\probeview')
     caseman = Caseman(casefunc, kwargs, test_fraction=tfrac, validation_fraction=vfrac)
     net = Network([15, 20, 16], caseman, steps, learn_rate=lrate, mbs=mbs, vint=5000)
