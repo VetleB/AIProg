@@ -23,7 +23,7 @@ class Network():
     # Set-up
     def __init__(self, dims, caseman, steps, learn_rate=0.01, mbs=10, haf=tf.nn.relu, oaf=tf.nn.relu,
                  softmax=True, loss='mse', optimizer=tf.train.GradientDescentOptimizer,
-                 vint=None, eint=1, mb_size=0):
+                 vint=None, eint=1, mb_size=0, bestk=1):
         self.caseman = caseman
         self.learn_rate = learn_rate
         self.dims = dims
@@ -36,7 +36,7 @@ class Network():
         self.softmax = softmax
         self.loss_func = loss
         self.opt = optimizer(learning_rate=learn_rate)
-        self.bestk=1
+        self.bestk=bestk
         self.error = 0
         self.error_interval = eint
         self.error_history = []
@@ -224,6 +224,7 @@ class Network():
     def run(self, sess=None, continued=False, bestk=None):
         tf.global_variables_initializer()
         session = sess if sess else TFT.gen_initialized_session(dir=self.log_dir)
+        #print(self.caseman.cases)
         self.current_session = session
         self.training_session(sess=self.current_session, continued=continued)
         self.test_on_trains(sess=self.current_session, bestk=bestk, msg='Total training')
@@ -338,12 +339,13 @@ def get_all_irvine_cases(case='wine', **kwargs):
     return feature_target_vector
 
 
-def autoexec(steps=50000, lrate=0.05, mbs=64, loss='mse', casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
+def autoexec(steps=50000, lrate=0.05, mbs=64, loss='mse', vint=1000, eint=100, casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
     os.system('del /Q /F .\probeview')
     caseman = Caseman(casefunc, kwargs, test_fraction=tfrac, validation_fraction=vfrac)
-    net = Network([15, 20, 16], caseman, steps, learn_rate=lrate, mbs=mbs, vint=1000, eint=100, loss=loss, )
+    net = Network([25, 20, 9], caseman, steps, learn_rate=lrate, mbs=mbs, vint=vint, eint=eint, loss=loss, bestk=bestk)
     net.run(bestk=bestk)
     TFT.plot_training_history(error_hist=net.error_history, validation_hist=net.validation_history)
+    TFT.dendrogram(features=, labels=)
     #TFT.plot_training_history(net.accuracy_history, ytitle='% correct', title='Accuracy')
     PLT.show()
     #Desktop

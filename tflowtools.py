@@ -150,14 +150,14 @@ def check_vector_symmetry(v):
 # This produces a set of symmetric vectors and appends the class label onto the end (for ease of use in ML).
 
 def gen_symvect_cases(vlen,count,label=1):
-    return [gen_symmetric_vector(vlen) + [label] for i in range(count)]
+    return [[gen_symmetric_vector(vlen), [0, 1]] for i in range(count)]
 
 def gen_anti_symvect_cases(vlen,count,label=0):
     cases = []
     while len(cases) < count:
         v = gen_dense_vector(vlen,density=NPR.uniform(0,1))
         if not(check_vector_symmetry(v)):
-            cases.append(v+[label])
+            cases.append([v, [1, 0]])
     return cases
 
 # Generate a dataset with an equal (or nearly so if vlen is odd) number of symmetric and anti-symmetric bit vectors
