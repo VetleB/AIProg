@@ -78,6 +78,7 @@ class Network():
             layer = Layer(self, 'output', invar, insize, self.dims[-1], af=self.OAF, name='output')
 
         self.output = layer.output
+        self.preout = layer.pre_out
         if self.softmax and not self.loss_func=='x_entropy': self.output = tf.nn.softmax(self.output)
 
         # if self.OAF:
@@ -94,8 +95,9 @@ class Network():
                 self.error = tf.reduce_mean(tf.squared_difference(self.target, self.output), name='MSE')
                 self.post_run_error_handling = lambda x : x
             elif self.loss_func=='x_entropy':
-                self.error = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.target, logits=self.output, name='MSE')
-                self.post_run_error_handling = lambda l : sum(l)
+                self.error = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.target, logits=self.preout, name='x_entropy')
+                self.error = tf.reduce_mean(self.error)
+                self.post_run_error_handling = lambda l : l
             summary(self.error)
 
         self.predictor = self.output
@@ -107,15 +109,15 @@ class Network():
         if not(continued): self.error_history = []
         trainables = tf.trainable_variables()
 
-        acc_vars = [tf.Variable(trainable.initialized_value(), trainable=False) for trainable in trainables]
-
-        zeros = [trainable.assign(tf.zeros_like(trainable)) for trainable in acc_vars]
-
-        gradients = self.opt.compute_gradients(loss=self.error)
-
-        acc_ops = [acc_vars[i].assign_add(gradient[0]) for i, gradient in enumerate(gradients)]
-
-        apply = self.opt.apply_gradients([(acc_vars[i], trainable) for i, trainable in enumerate(tf.trainable_variables())])
+        # acc_vars = [tf.Variable(trainable.initialized_value(), trainable=False) for trainable in trainables]
+        #
+        # zeros = [trainable.assign(tf.zeros_like(trainable)) for trainable in acc_vars]
+        #
+        # gradients = self.opt.compute_gradients(loss=self.error)
+        #
+        # acc_ops = [acc_vars[i].assign_add(gradient[0]) for i, gradient in enumerate(gradients)]
+        #
+        # apply = self.opt.apply_gradients([(acc_vars[i], trainable) for i, trainable in enumerate(tf.trainable_variables())])
 
         steps_left = self.steps
         num_mb = len(self.caseman.get_training_cases()) // self.minibatch_size
@@ -130,7 +132,7 @@ class Network():
 
             gvars = [self.error]
 
-            sess.run(zeros)
+            # sess.run(zeros)
 
             for j in range(num_mb):
                 NPR.shuffle(cases)
@@ -143,25 +145,25 @@ class Network():
                 summary,result,grabvals = self.current_session.run([self.merge_all, self.trainer, gvars], feed_dict=feeder)
                 self.writer.add_summary(summary, step+j)
                 #_,grabvals,sess = self.run_one_step([self.merge_all, acc_ops], gvars, session=sess, feed_dict=feeder, step=step)
-                #print(grabvals[0])
                 error += self.post_run_error_handling(grabvals[0])
                 #print(j, error)
                 if ((step+j)%self.validation_interval==0):
                     self.validation(step)
                     #print('error:', error)
                 show_step += 1
+                if show_step > self.error_interval:
+                    self.test_trains_and_log(step)
+                    show_step = 0
+                    # correct = self.test_on_trains(sess=self.current_session, bestk=self.bestk)
+                    # acc = correct/len(self.caseman.get_training_cases())
+                    # self.accuracy_history.append((step, acc))
 
             #sess.run([apply])
             # self.run_one_step([apply])
 
             step += num_mb
             avg_error = error/num_mb
-            if show_step > self.error_interval:
-                self.test_trains_and_log(step)
-                show_step = 0
-                # correct = self.test_on_trains(sess=self.current_session, bestk=self.bestk)
-                # acc = correct/len(self.caseman.get_training_cases())
-                # self.accuracy_history.append((step, acc))
+            print(avg_error)
             #self.error_history.append((step, avg_error))
 
             steps_left -= num_mb
@@ -210,7 +212,7 @@ class Network():
         return self.do_testing(sess, self.caseman.get_training_cases(), msg=msg, bestk=bestk)
 
     def gen_match_counter(self, logits, labels, k=1):
-        correct = tf.nn.in_top_k(tf.cast(logits, tf.float32), labels, k)
+        correct = tf.nn.in_top_k(tf.cast(logits,tf.float32), labels, k) # Return number of correct outputs
         return tf.reduce_sum(tf.cast(correct, tf.int32))
 
     # Run
@@ -230,6 +232,11 @@ class Network():
         self.test_on_trains(sess=self.current_session, bestk=bestk, msg='Total training')
         self.testing_session(sess=self.current_session, bestk=bestk)
         #self.close_current_session(view=False)
+
+    def test(self, input):
+        out = self.current_session.run([self.predictor], feed_dict={self.input:input})
+        return out
+
 
 # Graph stuff
 def summary(variable):
@@ -261,7 +268,8 @@ class Layer():
             self.biases = tf.Variable(np.random.uniform(-.1, .1, size=n), name=mona+'-bias', trainable=True)
             summary(self.biases)
         with tf.name_scope('act_func-'+str(self.index)):
-            self.output = self.AF(tf.matmul(self.input, self.weights)+self.biases, name=mona+'-out')
+            self.pre_out = tf.matmul(self.input, self.weights)+self.biases
+            self.output = self.AF(self.pre_out, name=mona+'-out')
             summary(self.output)
         self.network.add_module(self)
 
@@ -342,12 +350,14 @@ def get_all_irvine_cases(case='wine', **kwargs):
 def autoexec(steps=50000, lrate=0.05, mbs=64, loss='mse', vint=1000, eint=100, casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
     os.system('del /Q /F .\probeview')
     caseman = Caseman(casefunc, kwargs, test_fraction=tfrac, validation_fraction=vfrac)
-    net = Network([25, 20, 9], caseman, steps, learn_rate=lrate, mbs=mbs, vint=vint, eint=eint, loss=loss, bestk=bestk)
+    net = Network([25, 64, 9], caseman, steps, learn_rate=lrate, mbs=mbs, vint=vint, eint=eint, loss=loss, bestk=bestk, softmax=sm)
     net.run(bestk=bestk)
     TFT.plot_training_history(error_hist=net.error_history, validation_hist=net.validation_history)
-    TFT.dendrogram(features=, labels=)
+    # TODO: create dendrograms
+    #TFT.dendrogram(features=, labels=)
     #TFT.plot_training_history(net.accuracy_history, ytitle='% correct', title='Accuracy')
     PLT.show()
+    return net
     #Desktop
     #os.system('start chrome http://desktop-1vusl9o:6006
     #Laptop

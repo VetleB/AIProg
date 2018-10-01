@@ -3,3 +3,6 @@ mnist/*
 .idea*
 
 *.txt
+__pycache__
+probeview
+netsaver
