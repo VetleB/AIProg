@@ -22,20 +22,20 @@ def main(dimensions, HAF, OAF, loss_function, learn_rate, IWR, optimizer, data_s
 class Network():
     # Set-up
     def __init__(self, dims, caseman, steps, learn_rate=0.01, mbs=10, haf=tf.nn.relu, oaf=tf.nn.relu,
-                 softmax=True, loss='mse', optimizer=tf.train.GradientDescentOptimizer,
+                 softmax=True, loss='mse', optimizer='gd',
                  vint=None, eint=1, mb_size=0, bestk=1):
         self.caseman = caseman
         self.learn_rate = learn_rate
         self.dims = dims
         self.grabvars = []
         self.steps = steps
-        self.global_training_step = 0
+        self.global_training_step = tf.Variable(0, dtype=tf.float32, trainable=False)
         self.minibatch_size = mbs if mbs else dims[0]
         self.HAF = haf
         self.OAF = oaf
         self.softmax = softmax
         self.loss_func = loss
-        self.opt = optimizer(learning_rate=learn_rate)
+        self.opt = optimizer
         self.bestk=bestk
         self.error = 0
         self.error_interval = eint
@@ -60,6 +60,8 @@ class Network():
         #self.current_session = TFT.gen_initialized_session(dir=self.log_dir)
         self.current_session = tf.Session()
         self.writer = tf.summary.FileWriter(self.log_dir, graph=self.current_session.graph)
+
+        #self.current_session.run(self.global_training_step.initializer())
 
         num_inputs = self.dims[0]
         self.input = tf.placeholder(tf.float64, shape=(None, num_inputs), name='input')
@@ -101,7 +103,14 @@ class Network():
             summary(self.error)
 
         self.predictor = self.output
-        optimizer = tf.train.GradientDescentOptimizer(self.learn_rate)
+        if self.opt == 'gd':
+            optimizer = tf.train.GradientDescentOptimizer(self.learn_rate)
+        elif self.opt == 'rms':
+            optimizer = tf.train.RMSPropOptimizer(self.learn_rate)
+        elif self.opt == 'adam':
+            optimizer = tf.train.AdamOptimizer(self.learn_rate)
+        elif self.opt == 'adagrad':
+            optimizer = tf.train.AdagradOptimizer(self.learn_rate)
         self.trainer = optimizer.minimize(self.error, name='Backprop')
 
     # Do training
@@ -154,6 +163,7 @@ class Network():
                 if show_step > self.error_interval:
                     self.test_trains_and_log(step)
                     show_step = 0
+                    #print(error/j)
                     # correct = self.test_on_trains(sess=self.current_session, bestk=self.bestk)
                     # acc = correct/len(self.caseman.get_training_cases())
                     # self.accuracy_history.append((step, acc))
@@ -163,13 +173,13 @@ class Network():
 
             step += num_mb
             avg_error = error/num_mb
-            print(avg_error)
+            #print(avg_error)
             #self.error_history.append((step, avg_error))
 
             steps_left -= num_mb
         self.validation(step)
         print(self.error_history[-1])
-        self.global_training_step += step
+        self.global_training_step.assign_add(step)
 
     def validation(self, step):
         correct = self.do_testing(sess=self.current_session, cases=self.caseman.get_validation_cases(), bestk=self.bestk, msg='Validation')
@@ -347,10 +357,10 @@ def get_all_irvine_cases(case='wine', **kwargs):
     return feature_target_vector
 
 
-def autoexec(steps=50000, lrate=0.05, mbs=64, loss='mse', vint=1000, eint=100, casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
+def autoexec(dims=[], steps=50000, lrate=0.05, mbs=64, loss='mse', opt='gd', vint=1000, eint=100, casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
     os.system('del /Q /F .\probeview')
     caseman = Caseman(casefunc, kwargs, test_fraction=tfrac, validation_fraction=vfrac)
-    net = Network([25, 64, 9], caseman, steps, learn_rate=lrate, mbs=mbs, vint=vint, eint=eint, loss=loss, bestk=bestk, softmax=sm)
+    net = Network(dims, caseman, steps, learn_rate=lrate, mbs=mbs, vint=vint, eint=eint, loss=loss, bestk=bestk, softmax=sm, optimizer=opt)
     net.run(bestk=bestk)
     TFT.plot_training_history(error_hist=net.error_history, validation_hist=net.validation_history)
     # TODO: create dendrograms
