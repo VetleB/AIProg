@@ -94,7 +94,8 @@ class Network():
         # Define loss function
         with tf.name_scope('error'):
             if self.loss_func=='mse':
-                self.error = tf.reduce_mean(tf.squared_difference(self.target, self.preout), name='MSE')
+                #self.error = tf.reduce_mean(tf.squared_difference(self.target, self.preout), name='MSE')
+                self.error = tf.losses.mean_squared_error(labels=self.target, predictions=self.preout)
                 self.post_run_error_handling = lambda x : x
             elif self.loss_func=='x_entropy':
                 self.error = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.target, logits=self.preout, name='x_entropy')
@@ -184,6 +185,7 @@ class Network():
         if bestk is not None:
             self.test_func = self.gen_match_counter(self.predictor, [TFT.one_hot_to_int(list(v)) for v in targets], k=bestk)
         testres, grabvals = self.current_session.run([self.test_func, self.grabvars], feed_dict=feeder)
+        print(testres)
         if bestk is None and msg is not None:
             print('%s Set error = %f' % (msg, testres))
         elif msg is not None:
@@ -200,8 +202,12 @@ class Network():
         return self.do_testing(sess, self.caseman.get_training_cases(), msg=msg, bestk=bestk)
 
     def gen_match_counter(self, logits, labels, k=1):
+        #print(logits)
+        #tk = tf.nn.top_k(logits, k)
+        #return tk
         correct = tf.nn.in_top_k(tf.cast(logits,tf.float32), labels, k) # Return number of correct outputs
         return tf.reduce_sum(tf.cast(correct, tf.int32))
+        # in_top_k -> bool -> int -> sum
 
     def run(self, sess=None, continued=False, bestk=None):
         tf.global_variables_initializer()

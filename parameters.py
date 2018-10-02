@@ -33,13 +33,13 @@ def good_parameters(dataset):
               'dims': [11, 20, 6]
             , 'data_source': (main.get_all_irvine_cases, {'case': 'wine'})
             , 'steps': 20000
-            , 'optimizer': 'gd'
-            , 'loss_func': 'mse'
-            , 'OAF': tf.nn.softmax
-            , 'HAF': tf.nn.sigmoid
+            , 'optimizer': 'adam'
+            , 'loss_func': 'x_entropy'
+            , 'OAF': tf.sigmoid
+            , 'HAF': tf.sigmoid
             , 'eint': 100
             , 'l_rate': 1
-            , 'map_batch_size': 0
+            , 'map_batch_size': 10
             , 'map_layers': [0, 1, 2]
         }
         , 'mnist': {
@@ -57,10 +57,10 @@ def good_parameters(dataset):
             , 'data_source': (TFT.gen_all_parity_cases, {'num_bits': 10, 'double': True})
             , 'steps': 5000
             , 'optimizer': 'gd'
-            , 'loss_func': 'x_entropy'
+            , 'loss_func': 'mse'
             , 'eint': 100
             , 'l_rate': 1
-            , 'map_batch_size': 15
+            , 'map_batch_size': 0
             , 'map_layers': [0, 1]
         }
         , 'auto': {
