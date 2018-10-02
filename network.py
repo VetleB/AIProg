@@ -65,7 +65,7 @@ class Network():
 
         num_inputs = self.dims[0]
         self.input = tf.placeholder(tf.float64, shape=(None, num_inputs), name='input')
-        invar = self.input
+        invar = self.HAF(self.input)
         insize=num_inputs
 
         # Build hidden layers
@@ -146,12 +146,13 @@ class Network():
                     self.validation(step)
                 show_step += 1
                 if show_step > self.error_interval:
-                    self.test_trains_and_log(step)
+                    #self.test_trains_and_log(step)
                     show_step = 0
 
             step += num_mb
             avg_error = error/num_mb
             #print(avg_error)
+            self.error_history.append((step, avg_error))
 
             steps_left -= num_mb
         self.validation(step)
@@ -210,10 +211,13 @@ class Network():
         self.test_on_trains(sess=self.current_session, bestk=bestk, msg='Total training')
         if not self.caseman.test_fraction == 0:
             self.testing_session(sess=self.current_session, bestk=bestk)
-        self.do_mapping(sess=self.current_session)
+        if not self.map_batch_size == 0:
+            self.do_mapping(sess=self.current_session)
 
         #self.close_current_session(view=False)
+        print(self.caseman.cases[0][0])
         print(self.test([self.caseman.cases[0][0]]))
+        print(self.caseman.cases[1][0])
         print(self.test([self.caseman.cases[1][0]]))
 
     def do_mapping(self, sess):

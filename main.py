@@ -56,7 +56,7 @@ def summary(variable):
 
 
 def get_all_irvine_cases(case='wine', **kwargs):
-    file_dict = {'wine': ('wine.txt', 8),
+    file_dict = {'wine': ('wine.txt', 6),
                  'yeast': ('yeast.txt', 10),
                  'glass': ('glass.txt', 7)}
     f = open(file_dict[case][0])
@@ -65,7 +65,10 @@ def get_all_irvine_cases(case='wine', **kwargs):
         line = line.strip('\n')
         nums = line.split(';') if case=='wine' else line.split(',')
         features = [float(x) for x in nums[:-1]]
-        clazz = one_hotify(float(nums[-1])-1, file_dict[case][1])
+        if case=='wine':
+            clazz = one_hotify(float(nums[-1])-3, file_dict[case][1])
+        else:
+            clazz = one_hotify(float(nums[-1])-1, file_dict[case][1])
         feature_target_vector.append([features, clazz])
     f.close()
     return feature_target_vector

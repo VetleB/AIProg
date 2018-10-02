@@ -1,18 +1,20 @@
 import main
 import mnist.mnist_basics as mb
 import tflowtools as TFT
+import tensorflow as tf
 
 def good_parameters(dataset):
     param_dict = {
         'yeast': {
               'dims': [8, 20, 10]
             , 'data_source': (main.get_all_irvine_cases, {'case': 'yeast'})
-            , 'steps': 20000
+            , 'steps': 2000
             , 'optimizer': 'gd'
             , 'loss_func': 'x_entropy'
             , 'eint': 100
             , 'l_rate': 1
             , 'map_batch_size': 15
+            , 'map_layers': [0, 1, 2]
         }
         , 'glass': {
               'dims': [9, 20, 7]
@@ -20,8 +22,25 @@ def good_parameters(dataset):
             , 'steps': 20000
             , 'optimizer': 'gd'
             , 'loss_func': 'mse'
+            , 'OAF': tf.nn.softmax
+            , 'HAF': tf.nn.sigmoid
             , 'eint': 100
             , 'l_rate': 1
+            , 'map_batch_size': 0
+            , 'map_layers': [0, 1, 2]
+        }
+        , 'wine': {
+              'dims': [11, 20, 6]
+            , 'data_source': (main.get_all_irvine_cases, {'case': 'wine'})
+            , 'steps': 20000
+            , 'optimizer': 'gd'
+            , 'loss_func': 'mse'
+            , 'OAF': tf.nn.softmax
+            , 'HAF': tf.nn.sigmoid
+            , 'eint': 100
+            , 'l_rate': 1
+            , 'map_batch_size': 0
+            , 'map_layers': [0, 1, 2]
         }
         , 'mnist': {
               'dims': [784, 100, 20, 10]
