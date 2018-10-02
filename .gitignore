@@ -6,3 +6,5 @@ mnist/*
 __pycache__
 probeview
 netsaver
+
+MNIST_data
