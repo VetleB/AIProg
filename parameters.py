@@ -53,15 +53,51 @@ def good_parameters(dataset):
             , 'case_fraction': 0.1
         }
         , 'parity': {
-            'dims': [10, 20, 2]
+            'dims': [10, 25, 2]
             , 'data_source': (TFT.gen_all_parity_cases, {'num_bits': 10, 'double': True})
+            , 'steps': 15000
+            , 'optimizer': 'adagrad'
+            , 'loss_func': 'x_entropy'
+            , 'eint': 100
+            , 'l_rate': 1
+            , 'map_batch_size': 0
+            , 'map_layers': []
+        }
+        , 'symmetry': {
+            'dims': [10, 20, 2]
+            , 'data_source': (TFT.gen_symvect_dataset, {'vlen': 101, 'count': 2000})
             , 'steps': 5000
             , 'optimizer': 'gd'
             , 'loss_func': 'mse'
             , 'eint': 100
             , 'l_rate': 1
             , 'map_batch_size': 0
-            , 'map_layers': [0, 1]
+            , 'map_layers': []
+        }
+        , 'bit_counter': {
+            'dims': [15, 20, 16]
+            , 'data_source': (TFT.gen_vector_count_cases, {'num': 500, 'size': 15})
+            , 'steps': 10000
+            , 'optimizer': 'gd'
+            , 'loss_func': 'x_entropy'
+            , 'eint': 100
+            , 'l_rate': 1
+            , 'map_batch_size': 0
+            , 'map_layers': []
+            , 'map_dendrograms': []
+            , 'display_weights': []
+            , 'display_biases': []
+        }
+        , 'seg_counter': {
+            'dims': [25, 20, 9]
+            , 'data_source': (TFT.gen_segmented_vector_cases, {'vectorlen': 25, 'count': 1000, 'minsegs': 0, 'maxsegs': 8})
+            , 'steps': 10000
+            , 'optimizer': 'gd'
+            , 'loss_func': 'x_entropy'
+            , 'eint': 100
+            , 'l_rate': 1
+            , 'map_batch_size': 0
+            , 'map_layers': []
         }
         , 'auto': {
             'dims': [8, 3, 8]
@@ -74,8 +110,8 @@ def good_parameters(dataset):
             , 'vfrac': 0
             , 'tfrac': 0
             , 'minibatch_size': 1
-            , 'map_batch_size': 15
-            , 'map_layers': [0, 1, 2]
+            , 'map_batch_size': 0
+            , 'map_layers': []
         }
     }
     return param_dict[dataset]

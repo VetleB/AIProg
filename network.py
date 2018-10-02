@@ -185,7 +185,7 @@ class Network():
         if bestk is not None:
             self.test_func = self.gen_match_counter(self.predictor, [TFT.one_hot_to_int(list(v)) for v in targets], k=bestk)
         testres, grabvals = self.current_session.run([self.test_func, self.grabvars], feed_dict=feeder)
-        print(testres)
+        #print(testres)
         if bestk is None and msg is not None:
             print('%s Set error = %f' % (msg, testres))
         elif msg is not None:
@@ -218,7 +218,8 @@ class Network():
         if not self.caseman.test_fraction == 0:
             self.testing_session(sess=self.current_session, bestk=bestk)
         if not self.map_batch_size == 0:
-            self.do_mapping(sess=self.current_session)
+            self.visualize(sess=self.current_session)
+
 
         #self.close_current_session(view=False)
         print(self.caseman.cases[0][0])
@@ -226,20 +227,96 @@ class Network():
         print(self.caseman.cases[1][0])
         print(self.test([self.caseman.cases[1][0]]))
 
-    def do_mapping(self, sess):
+    def dendrogram(self):
+        pass
+
+    def visualize(self, sess):
         cases = self.caseman.get_mapping_cases(self.map_batch_size)
-        grabvars = [self.input, self.modules[0].output, self.predictor]
 
-        self.mapping_session(sess, cases, grabvars)
+        map_vars = self.get_map_vars()
+        weights = self.get_weights()
+        biases = self.get_biases()
 
-    def mapping_session(self, sess, cases, grabvars):
+        data = self.mapping_session(sess, cases, map_vars, weights, biases)
+
+        if not (self.map_dendrograms is None or self.map_dendrograms == []):
+            self.create_dendrogram(cases, data)
+
+        if not (self.display_weights is None or self.display_weights == []):
+            self.visualize_weights(data)
+
+        if not (self.display_biases is None or self.display_biases == []):
+            self.visualize_biases(data)
+
+    def visualize_weights(self, data):
+        for w in self.display_weights:
+            matrix = data[2][w-1]
+            TFT.hinton_plot(matrix, title='Weights-'+str(w))
+
+    def visualize_biases(self, data):
+        for b in self.display_biases:
+            matrix = data[3][b-1]
+            TFT.display_matrix(np.array([matrix]), title='Biases-'+str(b))
+
+    def create_dendrogram(self, cases, data):
+        labels = [TFT.bits_to_str(c[0]) for c in cases]
+
+        for layer in self.map_dendrograms:
+            dendro = data[1][layer]
+
+            dendro_label_pairs = [[dendro[i], labels[i]] for i in range(len(dendro))]
+
+            dendro, labels = self.remove_dupes(dendro_label_pairs)
+
+            TFT.dendrogram(features=dendro, labels=labels, title='Dendrogram-'+str(layer))
+
+    def remove_dupes(self, list_with_dupes):
+        labels = []
+        no_dupes = []
+
+        for e in list_with_dupes:
+            if e[1] not in labels:
+                labels.append(e[1])
+                no_dupes.append(e[0])
+
+        return no_dupes, labels
+
+    def get_weights(self):
+        weights = []
+        for w in self.display_weights:
+            weights.append(self.modules[w-1].weights)
+        return weights
+
+    def get_biases(self):
+        biases = []
+        for b in self.display_biases:
+            biases.append(self.modules[b-1].biases)
+        return biases
+
+    def get_map_vars(self):
+        sorted(self.map_layers)
+        if 0 in self.map_layers:
+            map_vars = [self.input]
+            layers = self.map_layers[1:]
+        else:
+            map_vars = []
+            layers = self.map_layers[:]
+
+        for layer_num in layers:
+            if layer_num >= 1:
+                map_vars.append(self.modules[layer_num-1].output)
+
+        return map_vars
+
+    def mapping_session(self, sess, cases, map_vars, weights, biases):
         inputs = [c[0] for c in cases]
         feeder = {self.input: inputs}
-        data = self.current_session.run([self.predictor, grabvars], feed_dict=feeder)
-        grabvals = data[1]
+        data = self.current_session.run([self.predictor, map_vars, weights, biases], feed_dict=feeder)
+        map_vars = data[1]
+        #print(data)
         for l in self.map_layers:
-            TFT.hinton_plot(grabvals[l])
-
+            TFT.hinton_plot(map_vars[l], title='Layer '+str(l))
+        return data
 
     def test(self, input):
         out = self.current_session.run([self.predictor], feed_dict={self.input:input})
