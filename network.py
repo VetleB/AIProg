@@ -96,11 +96,9 @@ class Network():
             if self.loss_func=='mse':
                 #self.error = tf.reduce_mean(tf.squared_difference(self.target, self.preout), name='MSE')
                 self.error = tf.losses.mean_squared_error(labels=self.target, predictions=self.preout)
-                self.post_run_error_handling = lambda x : x
             elif self.loss_func=='x_entropy':
                 self.error = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.target, logits=self.preout, name='x_entropy')
                 self.error = tf.reduce_mean(self.error)
-                self.post_run_error_handling = lambda l : l
             main.summary(self.error)
 
         self.predictor = self.output
@@ -124,7 +122,7 @@ class Network():
         step = 0
         show_step = 0
 
-        self.test_trains_and_log(step)
+        #self.test_trains_and_log(step)
 
         while steps_left > 0:
             num_mb = num_mb if steps_left > self.minibatch_size else steps_left
@@ -142,7 +140,7 @@ class Network():
 
                 summary,result,grabvals = self.current_session.run([self.merge_all, self.trainer, gvars], feed_dict=feeder)
                 self.writer.add_summary(summary, step+j)
-                error += self.post_run_error_handling(grabvals[0])
+                error += grabvals[0]
                 if ((step+j)%self.validation_interval==0):
                     self.validation(step)
                 show_step += 1
@@ -157,7 +155,7 @@ class Network():
 
             steps_left -= num_mb
         self.validation(step)
-        print(self.error_history[-1])
+        # print(self.error_history[-1])
         self.global_training_step.assign_add(step)
 
     def validation(self, step):
@@ -183,9 +181,10 @@ class Network():
         feeder = {self.input: inputs, self.target:targets}
         self.test_func = self.error
         if bestk is not None:
-            self.test_func = self.gen_match_counter(self.predictor, [TFT.one_hot_to_int(list(v)) for v in targets], k=bestk)
+            #self.test_func = self.gen_match_counter(self.predictor, [TFT.one_hot_to_int(list(v)) for v in targets], k=bestk)
+            self.test_func = self.gen_match_counter(self.predictor, targets, k=bestk)
         testres, grabvals = self.current_session.run([self.test_func, self.grabvars], feed_dict=feeder)
-        #print(testres)
+        print(testres)
         if bestk is None and msg is not None:
             print('%s Set error = %f' % (msg, testres))
         elif msg is not None:
@@ -202,10 +201,13 @@ class Network():
         return self.do_testing(sess, self.caseman.get_training_cases(), msg=msg, bestk=bestk)
 
     def gen_match_counter(self, logits, labels, k=1):
+        labels = [list(l) for l in labels]
         #print(logits)
         #tk = tf.nn.top_k(logits, k)
         #return tk
-        correct = tf.nn.in_top_k(tf.cast(logits,tf.float32), labels, k) # Return number of correct outputs
+        #logits = tf.cast(logits, tf.float32)
+        correct = tf.equal(tf.nn.top_k(logits, k)[1], tf.nn.top_k(labels, 1)[1])
+        #correct = tf.nn.in_top_k(tf.cast(logits,tf.float32), labels, k) # Return number of correct outputs
         return tf.reduce_sum(tf.cast(correct, tf.int32))
         # in_top_k -> bool -> int -> sum
 
@@ -221,14 +223,14 @@ class Network():
             self.visualize(sess=self.current_session)
 
 
-        #self.close_current_session(view=False)
-        print(self.caseman.cases[0][0])
-        print(self.test([self.caseman.cases[0][0]]))
-        print(self.caseman.cases[1][0])
-        print(self.test([self.caseman.cases[1][0]]))
+        # self.close_current_session(view=False)
 
-    def dendrogram(self):
-        pass
+        # tests = self.caseman.get_training_cases()[0:10]
+        # features = [t[0] for t in tests]
+        # labels = [t[1] for t in tests]
+        # print(tests)
+        # feeder = {self.input: features, self.target:labels}
+        # print(self.current_session.run([self.predictor, self.gen_match_counter(self.predictor, labels)], feed_dict=feeder))
 
     def visualize(self, sess):
         cases = self.caseman.get_mapping_cases(self.map_batch_size)
