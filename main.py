@@ -14,8 +14,8 @@ import caseman as cman
 from mnist import mnist_basics
 
 def main(dims=[], data_source=(), steps=0, optimizer='gd', loss_func='mse', l_rate=0.1, HAF=tf.nn.relu, OAF=tf.nn.relu,
-         IWR=(-.1, .1), bestk=1, case_fraction=1, vint=1000, vfrac=0.1, tfrac=0.1, minibatch_size=64, map_batch_size=0,
-         map_layers=[], map_dendrograms=[], display_weights=[], display_biases=[], sm=False, eint=1, premade=None):
+         IWR=(-.1, .1), case_fraction=1, vint=1000, vfrac=0.1, tfrac=0.1, minibatch_size=64, map_batch_size=0,
+         map_layers=[], map_dendrograms=[], display_weights=[], display_biases=[], premade=None):
 
     os.system('del /Q /F .\probeview')
 
@@ -26,12 +26,11 @@ def main(dims=[], data_source=(), steps=0, optimizer='gd', loss_func='mse', l_ra
         caseman = cman.Caseman(casefunc=data_source[0], kwargs=data_source[1], case_fraction=case_fraction,
                                test_fraction=tfrac, validation_fraction=vfrac)
 
-        net = network.Network(dims, caseman, steps, l_rate, minibatch_size, HAF, OAF, sm, loss_func, optimizer, vint,
-                              eint, map_batch_size, bestk, IWR=IWR, map_layers=map_layers,
-                              map_dendrograms=map_dendrograms, display_weights=display_weights,
-                              display_biases=display_biases)
+        net = network.Network(dims, caseman, steps, l_rate, minibatch_size, HAF, OAF, loss_func, optimizer, vint,
+                              map_batch_size, IWR=IWR, map_layers=map_layers, map_dendrograms=map_dendrograms,
+                              display_weights=display_weights, display_biases=display_biases)
 
-        net.run(bestk=bestk)
+        net.run(bestk=net.bestk)
         TFT.plot_training_history(error_hist=net.error_history, validation_hist=net.validation_history)
         # TODO: create dendrograms
         # TFT.dendrogram(features=, labels=)
@@ -55,10 +54,11 @@ def summary(variable):
 
 
 
-def get_all_irvine_cases(case='wine', **kwargs):
+def get_irvine_cases(case='wine', **kwargs):
     file_dict = {'wine': ('wine.txt', 6),
                  'yeast': ('yeast.txt', 10),
-                 'glass': ('glass.txt', 7)}
+                 'glass': ('glass.txt', 7),
+                 'seeds': ('seeds.txt', 3)}
     f = open(file_dict[case][0])
     feature_target_vector = []
     for line in f.readlines():
@@ -71,12 +71,28 @@ def get_all_irvine_cases(case='wine', **kwargs):
             clazz = one_hotify(float(nums[-1])-1, file_dict[case][1])
         feature_target_vector.append([features, clazz])
     f.close()
+    if case in ['glass', 'seeds', 'wine']:
+        scale(feature_target_vector)
+    # print(feature_target_vector)
     return feature_target_vector
 
 def one_hotify(clazz, num_clazzes):
     one_hot = [0]*num_clazzes
     one_hot[int(clazz)] = 1
     return one_hot
+
+def scale(dataset):
+    fmax = max([max(d[0]) for d in dataset])
+    fmin = min([min(d[0]) for d in dataset])
+
+    for pair in dataset:
+        features = pair[0]
+        for i in range(len(features)):
+            f_old = features[i]
+            f_new = (f_old-fmin)/(fmax-fmin)
+            features[i] = f_new
+
+
 
 
 def autoexec(dims=[], steps=50000, lrate=0.05, mbs=64, loss='mse', opt='gd', vint=1000, eint=100, casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):

@@ -12,8 +12,8 @@ import layer
 
 class Network():
     # Set-up
-    def __init__(self, dims, caseman, steps, learn_rate, mbs, haf, oaf, softmax, loss, optimizer, vint, eint, mpb_size,
-                 bestk, IWR, map_layers, map_dendrograms, display_weights, display_biases):
+    def __init__(self, dims, caseman, steps, learn_rate, mbs, haf, oaf, loss, optimizer, vint, mpb_size,
+                 IWR, map_layers, map_dendrograms, display_weights, display_biases):
         self.caseman = caseman
         self.learn_rate = learn_rate
         self.dims = dims
@@ -26,14 +26,12 @@ class Network():
         self.HAF = haf
         self.OAF = oaf
         self.iwr = IWR
-        self.softmax = softmax
         self.loss_func = loss
         self.opt = optimizer
-        self.bestk=bestk
+        self.bestk = 1
         self.modules = []
 
         self.error = 0
-        self.error_interval = eint
         self.error_history = []
         self.accuracy_history = []
         self.validation_interval = vint
@@ -81,7 +79,6 @@ class Network():
 
         self.output = output_layer.output
         self.preout = output_layer.pre_out
-        if self.softmax and not self.loss_func=='x_entropy': self.output = tf.nn.softmax(self.output)
 
         # if self.OAF:
         #     self.output = tf.nn.softmax(self.output)
@@ -120,7 +117,6 @@ class Network():
         steps_left = self.steps
         num_mb = len(self.caseman.get_training_cases()) // self.minibatch_size
         step = 0
-        show_step = 0
 
         #self.test_trains_and_log(step)
 
@@ -143,10 +139,6 @@ class Network():
                 error += grabvals[0]
                 if ((step+j)%self.validation_interval==0):
                     self.validation(step)
-                show_step += 1
-                if show_step > self.error_interval:
-                    #self.test_trains_and_log(step)
-                    show_step = 0
 
             step += num_mb
             avg_error = error/num_mb
@@ -184,7 +176,7 @@ class Network():
             #self.test_func = self.gen_match_counter(self.predictor, [TFT.one_hot_to_int(list(v)) for v in targets], k=bestk)
             self.test_func = self.gen_match_counter(self.predictor, targets, k=bestk)
         testres, grabvals = self.current_session.run([self.test_func, self.grabvars], feed_dict=feeder)
-        print(testres)
+        # print(testres)
         if bestk is None and msg is not None:
             print('%s Set error = %f' % (msg, testres))
         elif msg is not None:
@@ -211,7 +203,7 @@ class Network():
         return tf.reduce_sum(tf.cast(correct, tf.int32))
         # in_top_k -> bool -> int -> sum
 
-    def run(self, sess=None, continued=False, bestk=None):
+    def run(self, sess=None, continued=False, bestk=1):
         tf.global_variables_initializer()
         session = sess if sess else TFT.gen_initialized_session(dir=self.log_dir)
         self.current_session = session

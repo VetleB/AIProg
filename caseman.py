@@ -17,7 +17,7 @@ class Caseman():
 
     def organize_cases(self):
         ca = np.array(self.cases)
-        # NPR.shuffle(ca)
+        NPR.shuffle(ca)
         ca = ca[:round(self.case_fraction*len(ca))]
         self.cases = ca
         sep1 = round(len(ca)*self.test_fraction)
