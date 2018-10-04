@@ -47,12 +47,12 @@ param_dict = {
         , 'display_biases': []
     }
     , 'wine': {
-        'dims': [11, 64, 32, 16, 8, 6]
+        'dims': [11, 128, 64, 16, 6]
         , 'data_source': (main.get_irvine_cases, {'case': 'wine'})
-        , 'steps': 75000
+        , 'steps': 30000
         , 'optimizer': 'adagrad'
         , 'loss_func': 'x_entropy'
-        , 'l_rate': 0.1
+        , 'l_rate': 0.5
         , 'HAF': tf.tanh
         , 'OAF': tf.tanh
         , 'IWR': (-.1, .1)
