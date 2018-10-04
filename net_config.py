@@ -28,7 +28,7 @@ param_dict = {
     , 'glass': {
         'dims': [9, 128, 64, 32, 7]
         , 'data_source': (main.get_irvine_cases, {'case': 'glass'})
-        , 'steps': 40000
+        , 'steps': 45000
         , 'optimizer': 'adagrad'
         , 'loss_func': 'x_entropy'
         , 'l_rate': 0.1

@@ -1,5 +1,4 @@
 mnist/*
-!mnist/mnist_basics.py
 !mnist/all_flat_mnist_training_cases
 .idea*
 
