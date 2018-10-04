@@ -28,34 +28,38 @@ def edit_predefined():
     float_params = ['l_rate', 'case_fraction', 'vfrac', 'tfrac']
     list_params = ['dims', 'IWR', 'map_layers', 'map_dendrograms', 'display_weights', 'display_biases']
 
-    params, choice = get_set(default=True)
+    param = 'reset'
+    while param == 'reset':
 
-    print_params(params)
-    param = input('\n'*2 + 'Choose a parameter to edit: ').strip()
-    while param != 'q' and param != 'quit':
-        if param in string_params:
-            new_param = get_string_param(param)
-        elif param in activation_funcs:
-            new_param = get_activation_func()
-        elif param in int_params:
-            new_param = int(input(param + ' value: ').strip())
-        elif param in float_params:
-            new_param = float(input(param + ' value: ').strip())
-        elif param in list_params:
-            new_param = get_list_param(param)
-        elif param == 'data_source':
-            print('\n' + 'Please change in net_config')
-            param = input('\n' * 2 + 'Choose a parameter to edit: ').strip()
-            continue
-        else:
-            print('\n' + 'Not a valid parameter')
-            param = input('\n' * 2 + 'Choose a parameter to edit: ').strip()
-            continue
-
-        params[param] = new_param
+        params, choice = get_set(default=True)
 
         print_params(params)
         param = input('\n'*2 + 'Choose a parameter to edit: ').strip()
+        while param != 'q' and param != 'reset':
+            if param in string_params:
+                new_param = get_string_param(param)
+            elif param in activation_funcs:
+                new_param = get_activation_func()
+            elif param in int_params:
+                new_param = int(input(param + ' value: ').strip())
+            elif param in float_params:
+                new_param = float(input(param + ' value: ').strip())
+            elif param in list_params:
+                new_param = get_list_param(param)
+            elif param == 'data_source':
+                print('\n' + 'Please change in net_config')
+                param = input('\n' * 2 + 'Choose a parameter to edit: ').strip()
+                continue
+            else:
+                print('\n' + 'Not a valid parameter')
+                param = input('\n' * 2 + 'Choose a parameter to edit: ').strip()
+                continue
+
+            params[param] = new_param
+
+            print_params(params)
+            param = input('\n'*2 + 'Choose a parameter to edit: ').strip()
+
 
     return params, choice
 
