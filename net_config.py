@@ -26,12 +26,12 @@ param_dict = {
         , 'display_biases': []
     }
     , 'glass': {
-        'dims': [9, 128, 64, 32, 7]
+        'dims': [9, 128, 64, 16, 7]
         , 'data_source': (main.get_irvine_cases, {'case': 'glass'})
-        , 'steps': 45000
+        , 'steps': 40000
         , 'optimizer': 'adagrad'
         , 'loss_func': 'x_entropy'
-        , 'l_rate': 0.1
+        , 'l_rate': 0.5
         , 'HAF': tf.tanh
         , 'OAF': tf.tanh
         , 'IWR': (-.1, .1)

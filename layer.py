@@ -19,14 +19,8 @@ class Layer():
     def build(self):
         mona = self.name
         n = self.outsize
-        with tf.name_scope('weights-'+str(self.index)):
-            self.weights = tf.Variable(np.random.uniform(self.iwr[0], self.iwr[1], size=(self.insize, n)), name=mona+'-wgt', trainable=True)
-            main.summary(self.weights)
-        with tf.name_scope('biases-'+str(self.index)):
-            self.biases = tf.Variable(np.random.uniform(self.iwr[0], self.iwr[1], size=n), name=mona+'-bias', trainable=True)
-            main.summary(self.biases)
-        with tf.name_scope('act_func-'+str(self.index)):
-            self.pre_out = tf.matmul(self.input, self.weights)+self.biases
-            self.output = self.AF(self.pre_out, name=mona+'-out')
-            main.summary(self.output)
+        self.weights = tf.Variable(np.random.uniform(self.iwr[0], self.iwr[1], size=(self.insize, n)), name=mona+'-wgt', trainable=True)
+        self.biases = tf.Variable(np.random.uniform(self.iwr[0], self.iwr[1], size=n), name=mona+'-bias', trainable=True)
+        self.pre_out = tf.matmul(self.input, self.weights)+self.biases
+        self.output = self.AF(self.pre_out, name=mona+'-out')
         self.network.add_module(self)

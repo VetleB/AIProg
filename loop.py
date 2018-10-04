@@ -4,6 +4,7 @@ import tensorflow as tf
 
 
 def loop():
+    # Main loop
     while True:
         choice = int(input('predefined (1) or customized (2)? ').strip())
         if choice == 1:
@@ -64,6 +65,7 @@ def edit_predefined():
     return params, choice
 
 
+# WIP, not finished for project 1
 def get_data_source(params):
     data_param = input('\n' + 'generator (1) or kwargs (2)? ').strip()
 
@@ -92,6 +94,7 @@ def get_data_source(params):
         data_param = input('\n' + 'generator (1) or kwargs (2)? ').strip()
 
 
+# Read input and turn it into a list
 def get_list_param(param):
     values = str(input('\n'*2 + 'Values for list ' + param + ' (separator=,): ').strip())
     string_list = values.split(',')
@@ -102,6 +105,7 @@ def get_list_param(param):
     return new_param
 
 
+# List options for various string-type parameters
 def get_string_param(param):
     opts = ['gd', 'rms', 'adam', 'adagrad']
     losses = ['mse', 'x_entropy']
@@ -142,6 +146,7 @@ def get_activation_func():
     return act_funcs[new_param]
 
 
+# Choose a set of parameters either for running or for editing further
 def get_set(default=False):
     list_of_predef = list(parameters.get_config().keys())
     if default:

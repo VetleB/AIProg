@@ -48,6 +48,7 @@ class Network():
         self.build()
 
 
+    # Add layer to list of layers
     def add_module(self, module):
         self.modules.append(module)
 
@@ -55,12 +56,9 @@ class Network():
     def build(self):
         tf.reset_default_graph()
 
-        #self.current_session = TFT.gen_initialized_session(dir=self.log_dir)
         self.current_session = tf.Session()
-        self.writer = tf.summary.FileWriter(self.log_dir, graph=self.current_session.graph)
 
-        #self.current_session.run(self.global_training_step.initializer())
-
+        # Build input layer
         num_inputs = self.dims[0]
         self.input = tf.placeholder(tf.float64, shape=(None, num_inputs), name='input')
         invar = self.HAF(self.input)
@@ -68,38 +66,30 @@ class Network():
 
         # Build hidden layers
         for i, outsize in enumerate(self.dims[1:-1], 1):
-            with tf.name_scope('hidden-'+str(i)):
-                hidden_layer = layer.Layer(self, i, invar, insize, outsize, af=self.HAF, iwr=self.iwr)
-                invar = hidden_layer.output
-                insize = hidden_layer.outsize
+            hidden_layer = layer.Layer(self, i, invar, insize, outsize, af=self.HAF, iwr=self.iwr)
+            invar = hidden_layer.output
+            insize = hidden_layer.outsize
 
         # Build output layer
-        with tf.name_scope('output'):
-            output_layer = layer.Layer(self, 'output', invar, insize, self.dims[-1], af=self.OAF, name='output', iwr=self.iwr)
+        output_layer = layer.Layer(self, 'output', invar, insize, self.dims[-1], af=self.OAF, name='output', iwr=self.iwr)
 
         self.output = output_layer.output
         self.preout = output_layer.pre_out
-
-        # if self.OAF:
-        #     self.output = tf.nn.softmax(self.output)
         self.target = tf.placeholder(tf.float64, shape=(None, output_layer.outsize), name='Target')
-        self.configure_learning()
 
-        self.merge_all = tf.summary.merge_all()
+        self.configure_learning()
 
     def configure_learning(self):
         # Define loss function
-        with tf.name_scope('error'):
-            if self.loss_func=='mse':
-                #self.error = tf.reduce_mean(tf.squared_difference(self.target, self.preout), name='MSE')
-                self.error = tf.losses.mean_squared_error(labels=self.target, predictions=self.preout)
-            elif self.loss_func=='x_entropy':
-                self.error = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.target, logits=self.preout, name='x_entropy')
-                self.error = tf.reduce_mean(self.error)
-            main.summary(self.error)
+        if self.loss_func=='mse':
+            self.error = tf.losses.mean_squared_error(labels=self.target, predictions=self.preout)
+        elif self.loss_func=='x_entropy':
+            self.error = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.target, logits=self.preout, name='x_entropy')
+            self.error = tf.reduce_mean(self.error)
 
         self.predictor = self.output
 
+        # Define optimizer
         if self.opt == 'gd':
             optimizer = tf.train.GradientDescentOptimizer(self.learn_rate)
         elif self.opt == 'rms':
@@ -118,14 +108,17 @@ class Network():
         num_mb = len(self.caseman.get_training_cases()) // self.minibatch_size
         step = 0
 
-        #self.test_trains_and_log(step)
-
+        # Loop through all the steps
         while steps_left > 0:
+            # steps left, cut short during final iteration if needed
             num_mb = num_mb if steps_left > self.minibatch_size else steps_left
+
+            # Total error over minibatch
             error = 0
 
             gvars = [self.error]
 
+            # Run some minibatches
             for j in range(num_mb):
                 NPR.shuffle(cases)
                 minibatch = cases[0:self.minibatch_size]
@@ -134,20 +127,23 @@ class Network():
                 targets = [c[1] for c in minibatch]
                 feeder = {self.input: inputs, self.target: targets}
 
-                summary,result,grabvals = self.current_session.run([self.merge_all, self.trainer, gvars], feed_dict=feeder)
-                self.writer.add_summary(summary, step+j)
+                result,grabvals = self.current_session.run([self.trainer, gvars], feed_dict=feeder)
+
                 error += grabvals[0]
-                if ((step+j)%self.validation_interval==0):
+
+                # Validation at intervals
+                if ((step+j)%self.validation_interval == 0):
                     self.validation(step)
 
             step += num_mb
             avg_error = error/num_mb
-            #print(avg_error)
             self.error_history.append((step, avg_error))
 
             steps_left -= num_mb
+
+        # Final validation run
         self.validation(step)
-        # print(self.error_history[-1])
+
         self.global_training_step.assign_add(step)
 
     def validation(self, step):
@@ -155,12 +151,6 @@ class Network():
             correct = self.do_testing(sess=self.current_session, cases=self.caseman.get_validation_cases(), bestk=self.bestk, msg=None)
             acc = correct/len(self.caseman.get_validation_cases())
             self.validation_history.append((step, 1-acc))
-
-    def test_trains_and_log(self, step):
-        correct = self.test_on_trains(sess=self.current_session, bestk=self.bestk, msg=None)
-        acc = correct/len(self.caseman.get_training_cases())
-        self.error_history.append((step, 1-acc))
-
 
     def training_session(self, sess=None, continued=False):
         session = sess if sess else TFT.gen_initialized_session(dir=self.log_dir)
@@ -172,16 +162,19 @@ class Network():
         targets = [c[1] for c in cases]
         feeder = {self.input: inputs, self.target:targets}
         self.test_func = self.error
+
         if bestk is not None:
-            #self.test_func = self.gen_match_counter(self.predictor, [TFT.one_hot_to_int(list(v)) for v in targets], k=bestk)
+            # This basically always happens
             self.test_func = self.gen_match_counter(self.predictor, targets, k=bestk)
+
         testres, grabvals = self.current_session.run([self.test_func, self.grabvars], feed_dict=feeder)
-        # print(testres)
+
         if bestk is None and msg is not None:
             print('%s Set error = %f' % (msg, testres))
         elif msg is not None:
             acc = 100*(testres/len(cases))
             print('%s Set correct classification = %f %%' % (msg, acc))
+
         return testres
 
     def testing_session(self, sess, bestk=None):
@@ -194,14 +187,12 @@ class Network():
 
     def gen_match_counter(self, logits, labels, k=1):
         labels = [list(l) for l in labels]
-        #print(logits)
-        #tk = tf.nn.top_k(logits, k)
-        #return tk
-        #logits = tf.cast(logits, tf.float32)
+
+        # Find indices of top values and see if they're the same
         correct = tf.equal(tf.nn.top_k(logits, k)[1], tf.nn.top_k(labels, 1)[1])
-        #correct = tf.nn.in_top_k(tf.cast(logits,tf.float32), labels, k) # Return number of correct outputs
+
+        # Cast booleans to ints and sum
         return tf.reduce_sum(tf.cast(correct, tf.int32))
-        # in_top_k -> bool -> int -> sum
 
     def run(self, sess=None, continued=False, bestk=1):
         tf.global_variables_initializer()
@@ -214,16 +205,7 @@ class Network():
         if not self.map_batch_size == 0:
             self.visualize(sess=self.current_session)
 
-
-        # self.close_current_session(view=False)
-
-        # tests = self.caseman.get_training_cases()[0:10]
-        # features = [t[0] for t in tests]
-        # labels = [t[1] for t in tests]
-        # print(tests)
-        # feeder = {self.input: features, self.target:labels}
-        # print(self.current_session.run([self.predictor, self.gen_match_counter(self.predictor, labels)], feed_dict=feeder))
-
+    # Perform mapping, dendrograms, etc. if applicable
     def visualize(self, sess):
         cases = self.caseman.get_mapping_cases(self.map_batch_size)
 
@@ -309,7 +291,6 @@ class Network():
         feeder = {self.input: inputs}
         data = self.current_session.run([self.predictor, map_vars, weights, biases], feed_dict=feeder)
         map_vars = data[1]
-        #print(data)
         for i in range(len(self.map_layers)):
             TFT.hinton_plot(map_vars[i], title='Layer '+str(self.map_layers[i]))
         return data

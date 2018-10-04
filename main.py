@@ -1,21 +1,16 @@
 import tensorflow as tf
-import numpy as np
-import math
 import matplotlib.pyplot as PLT
 import tflowtools as TFT
-import mnist.mnist_basics as mb
-import numpy.random as NPR
 import os
-
 import network
 import caseman as cman
 
-from mnist import mnist_basics
-
+# Set up a case manager, create a network, call run and plot training and validation history
 def main(dims=[], data_source=(), steps=0, optimizer='gd', loss_func='mse', l_rate=0.1, HAF=tf.nn.relu, OAF=tf.nn.relu,
          IWR=(-.1, .1), case_fraction=1, vint=1000, vfrac=0.1, tfrac=0.1, minibatch_size=64, map_batch_size=0,
          map_layers=[], map_dendrograms=[], display_weights=[], display_biases=[], premade=None):
 
+    # Delete old files
     os.system('del /Q /F .\probeview')
 
     caseman = cman.Caseman(casefunc=data_source[0], kwargs=data_source[1], case_fraction=case_fraction,
@@ -27,28 +22,13 @@ def main(dims=[], data_source=(), steps=0, optimizer='gd', loss_func='mse', l_ra
 
     net.run(bestk=net.bestk)
     TFT.plot_training_history(error_hist=net.error_history, validation_hist=net.validation_history)
-    # TODO: create dendrograms
-    # TFT.dendrogram(features=, labels=)
-    # TFT.plot_training_history(net.accuracy_history, ytitle='% correct', title='Accuracy')
+
     PLT.show()
     return net
 
 
-
-
-# Graph stuff
-def summary(variable):
-    with tf.name_scope('summary'):
-        mean = tf.reduce_mean(variable)
-        tf.summary.scalar('mean', mean)
-
-
-
-
-
-
-
-
+# Read datasets from UC Irvine
+# txt files must be in same directory as file
 def get_irvine_cases(case='wine', **kwargs):
     file_dict = {'wine': ('wine.txt', 6),
                  'yeast': ('yeast.txt', 10),
@@ -71,11 +51,15 @@ def get_irvine_cases(case='wine', **kwargs):
     # print(feature_target_vector)
     return feature_target_vector
 
+# Turn int into a one_hot vector
 def one_hotify(clazz, num_clazzes):
     one_hot = [0]*num_clazzes
     one_hot[int(clazz)] = 1
     return one_hot
 
+
+# Scale datasets
+# Used when features have large differences in magnitudes
 def scale(dataset):
     fmax = max([max(d[0]) for d in dataset])
     fmin = min([min(d[0]) for d in dataset])
@@ -89,7 +73,7 @@ def scale(dataset):
 
 
 
-
+# Not used at the moment
 def autoexec(dims=[], steps=50000, lrate=0.05, mbs=64, loss='mse', opt='gd', vint=1000, eint=100, casefunc=TFT.gen_vector_count_cases, kwargs={'num':500, 'size':15}, vfrac=0.1, tfrac=0.1, bestk=None, sm=False):
     os.system('del /Q /F .\probeview')
     caseman = cman.Caseman(casefunc, kwargs, test_fraction=tfrac, validation_fraction=vfrac)

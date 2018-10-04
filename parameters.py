@@ -1,7 +1,6 @@
 import main
 import mnist.mnist_basics as mb
 import tflowtools as TFT
-import tensorflow as tf
 import net_config
 
 
