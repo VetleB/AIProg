@@ -8,7 +8,6 @@ import numpy.random as NPR
 import os
 
 import network
-import parameters
 import caseman as cman
 
 from mnist import mnist_basics
@@ -19,24 +18,20 @@ def main(dims=[], data_source=(), steps=0, optimizer='gd', loss_func='mse', l_ra
 
     os.system('del /Q /F .\probeview')
 
-    if premade is not None:
-        params = parameters.good_parameters(premade)
-        return main(**params)
-    else:
-        caseman = cman.Caseman(casefunc=data_source[0], kwargs=data_source[1], case_fraction=case_fraction,
-                               test_fraction=tfrac, validation_fraction=vfrac)
+    caseman = cman.Caseman(casefunc=data_source[0], kwargs=data_source[1], case_fraction=case_fraction,
+                           test_fraction=tfrac, validation_fraction=vfrac)
 
-        net = network.Network(dims, caseman, steps, l_rate, minibatch_size, HAF, OAF, loss_func, optimizer, vint,
-                              map_batch_size, IWR=IWR, map_layers=map_layers, map_dendrograms=map_dendrograms,
-                              display_weights=display_weights, display_biases=display_biases)
+    net = network.Network(dims, caseman, steps, l_rate, minibatch_size, HAF, OAF, loss_func, optimizer, vint,
+                          map_batch_size, IWR=IWR, map_layers=map_layers, map_dendrograms=map_dendrograms,
+                          display_weights=display_weights, display_biases=display_biases)
 
-        net.run(bestk=net.bestk)
-        TFT.plot_training_history(error_hist=net.error_history, validation_hist=net.validation_history)
-        # TODO: create dendrograms
-        # TFT.dendrogram(features=, labels=)
-        # TFT.plot_training_history(net.accuracy_history, ytitle='% correct', title='Accuracy')
-        PLT.show()
-        return net
+    net.run(bestk=net.bestk)
+    TFT.plot_training_history(error_hist=net.error_history, validation_hist=net.validation_history)
+    # TODO: create dendrograms
+    # TFT.dendrogram(features=, labels=)
+    # TFT.plot_training_history(net.accuracy_history, ytitle='% correct', title='Accuracy')
+    PLT.show()
+    return net
 
 
 
@@ -58,12 +53,12 @@ def get_irvine_cases(case='wine', **kwargs):
     file_dict = {'wine': ('wine.txt', 6),
                  'yeast': ('yeast.txt', 10),
                  'glass': ('glass.txt', 7),
-                 'seeds': ('seeds.txt', 3)}
+                 'iris': ('iris.txt', 3)}
     f = open(file_dict[case][0])
     feature_target_vector = []
     for line in f.readlines():
         line = line.strip('\n')
-        nums = line.split(';') if case=='wine' else line.split(',')
+        nums = line.split(',')
         features = [float(x) for x in nums[:-1]]
         if case=='wine':
             clazz = one_hotify(float(nums[-1])-3, file_dict[case][1])
@@ -71,7 +66,7 @@ def get_irvine_cases(case='wine', **kwargs):
             clazz = one_hotify(float(nums[-1])-1, file_dict[case][1])
         feature_target_vector.append([features, clazz])
     f.close()
-    if case in ['glass', 'seeds', 'wine']:
+    if case in ['glass', 'iris', 'wine']:
         scale(feature_target_vector)
     # print(feature_target_vector)
     return feature_target_vector

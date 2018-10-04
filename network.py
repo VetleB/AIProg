@@ -242,10 +242,12 @@ class Network():
         if not (self.display_biases is None or self.display_biases == []):
             self.visualize_biases(data)
 
+        TFT.hinton_plot(np.array([c[1] for c in cases]), title='Target')
+
     def visualize_weights(self, data):
         for w in self.display_weights:
             matrix = data[2][w-1]
-            TFT.hinton_plot(matrix, title='Weights-'+str(w))
+            TFT.display_matrix(matrix, title='Weights-'+str(w))
 
     def visualize_biases(self, data):
         for b in self.display_biases:
@@ -253,9 +255,9 @@ class Network():
             TFT.display_matrix(np.array([matrix]), title='Biases-'+str(b))
 
     def create_dendrogram(self, cases, data):
-        labels = [TFT.bits_to_str(c[0]) for c in cases]
 
         for layer in self.map_dendrograms:
+            labels = [TFT.bits_to_str(c[1]) for c in cases]
             dendro = data[1][layer]
 
             dendro_label_pairs = [[dendro[i], labels[i]] for i in range(len(dendro))]
@@ -308,8 +310,8 @@ class Network():
         data = self.current_session.run([self.predictor, map_vars, weights, biases], feed_dict=feeder)
         map_vars = data[1]
         #print(data)
-        for l in self.map_layers:
-            TFT.hinton_plot(map_vars[l], title='Layer '+str(l))
+        for i in range(len(self.map_layers)):
+            TFT.hinton_plot(map_vars[i], title='Layer '+str(self.map_layers[i]))
         return data
 
     def test(self, input):

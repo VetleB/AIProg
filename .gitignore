@@ -1,8 +1,13 @@
 mnist/*
 !mnist/mnist_basics.py
+!mnist/all_flat_mnist_training_cases
 .idea*
 
 *.txt
+!glass.txt
+!iris.txt
+!wine.txt
+!yeast.txt
 __pycache__
 probeview
 netsaver
