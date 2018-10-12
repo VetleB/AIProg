@@ -1,14 +1,16 @@
-mnist/*
-!mnist/all_flat_mnist_training_cases
+*/mnist/*
+!*/mnist/all_flat_mnist_training_cases
 .idea*
 
 *.txt
-!glass.txt
-!iris.txt
-!wine.txt
-!yeast.txt
+!*glass.txt
+!*iris.txt
+!*wine.txt
+!*yeast.txt
 __pycache__
-probeview
-netsaver
+*probeview
+*netsaver
 
-MNIST_data
+*MNIST_data
+
+*/figures/*
