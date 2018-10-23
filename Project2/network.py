@@ -14,8 +14,8 @@ class Tree:
 
         for rollout in range(rollouts):
             leaf_node = self.tree_search(root)
-            #print(leaf_node.state)
-            #print()
+            # print(leaf_node.state)
+            # print()
 
             if not leaf_node.win_state():
                 leaf_node.children = []
@@ -54,19 +54,21 @@ class Tree:
     def tree_search(self, root):
         node = root
         while node.children is not None and not node.win_state():
+            old_node = node
             node = self.tree_policy(node)
-        #print()
+            node.parent = old_node
+        # print()
         return node
 
     def tree_policy(self, node, expl=True):
         best_node = node.children[0]
         best_val = best_node.value(expl)
         for child in node.children:
-            #print(child.state, child.ratio(), end=' ')
+            # print(child.state, child.ratio(), end=' ')
             val = child.value(expl)
-            #print(val, end=' ')
+            # print(val, end=' ')
             if val > best_val:
                 best_node = child
                 best_val = val
-        #print()
+        # print()
         return best_node

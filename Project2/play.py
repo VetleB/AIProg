@@ -1,22 +1,38 @@
 import nim
 import network
+import random
 
 
 class Play:
 
-    def __init__(self, stones, move_size, player_start, num_rollouts):
+    def __init__(self, stones, move_size, num_rollouts, player_start, batch_size=1, verbose=True):
+        self.stones = stones
+        self.move_size = move_size
+        self.player_start = player_start
 
-        self.game = nim.Nim(stones, move_size, player_start)
         self.rollouts = num_rollouts
+        self.batch_size = batch_size
+        self.verbose = verbose
 
-    def play_game(self, episodes):
-        for episode in range(episodes):
+    def play_game(self):
+        white_wins = 0
+        for batch in range(self.batch_size):
+            self.game = nim.Nim(self.stones, self.move_size, self.player_start, self.verbose)
             tree = network.Tree(self.game.get_initial_state(), self.game)
 
             while not self.game.actual_game_over():
                 tree.simulate_game(self.game.state, self.rollouts)
                 move_node = tree.tree_policy(tree.tree[self.game.state], expl=False)
-                options = [(n.state, n.ratio()) for n in move_node.parent.children]
-                print(options)
+                # options = [(n.state, n.ratio()) for n in move_node.parent.children]
+                # print(options)
                 self.game.make_actual_move(move_node.state)
-                #print()
+                # print()
+            white_wins += self.game.winner(self.game.state)
+            #print('Game', batch+1, 'winner:', self.game.winner(self.game.state))
+        print('White wins', white_wins, 'out of', self.batch_size, 'games (' + str(100*white_wins/self.batch_size) + ')%')
+
+    def choose_starting_player(self):
+        if self.player_start == -1:
+            n = random.random()
+            return 0 if n < 0.5 else 1
+        return self.player_start

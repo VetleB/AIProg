@@ -1,6 +1,6 @@
 class Nim:
 
-    def __init__(self, stones, move_size, player_start):
+    def __init__(self, stones, move_size, player_start, verbose=True):
         if stones > 2:
             self.stones = stones
         else:
@@ -16,6 +16,8 @@ class Nim:
         self.players = {1: 'White', 0: 'Black'}
 
         self.state = self.get_initial_state()
+
+        self.verbose = verbose
 
     def get_initial_state(self):
         initial_state = (self.stones, self.player)
@@ -35,7 +37,8 @@ class Nim:
         num_rocks_taken = self.state[0] - state[0]
         remaining = state[0]
 
-        print(moving_player, "picks", num_rocks_taken, "stones: Remaining stones =", remaining)
+        if self.verbose:
+            print(moving_player, "picks", num_rocks_taken, "stones: Remaining stones =", remaining)
 
         self.state = state
 
@@ -58,7 +61,7 @@ class Nim:
     def actual_game_over(self):
         end = self.game_over(self.state)
 
-        if end:
+        if end and self.verbose:
             print(self.player_to_string(self.winner(self.state)), "wins")
 
         return end
