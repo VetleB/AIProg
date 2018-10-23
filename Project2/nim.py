@@ -18,7 +18,7 @@ class Nim:
         self.state = self.get_initial_state()
 
     def get_initial_state(self):
-        initial_state = (self.stones, self.player, None)
+        initial_state = (self.stones, self.player)
         return initial_state
 
     def generate_child_states(self, state):
@@ -32,8 +32,8 @@ class Nim:
 
     def make_actual_move(self, state):
         moving_player = self.player_to_string(self.state[1])
-        num_rocks_taken = state[2]
-        remaining = self.state[0] - state[2]
+        num_rocks_taken = self.state[0] - state[0]
+        remaining = state[0]
 
         print(moving_player, "picks", num_rocks_taken, "stones: Remaining stones =", remaining)
 
@@ -45,9 +45,9 @@ class Nim:
         if not self.game_over(state):
             if num_stones_taken in range(1, self.move_size+1) and num_stones_taken <= stones:
                 state = self.take_stones(state, num_stones_taken)
+                state = self.switch_player(state)
             else:
                 return None
-            state = self.switch_player(state)
         else:
             return None
         return state
@@ -70,12 +70,12 @@ class Nim:
 
     def take_stones(self, state, stones_taken):
         new_stones = state[0]-stones_taken
-        new_state = (new_stones, state[1], stones_taken)
+        new_state = (new_stones, state[1])
         return new_state
 
     def switch_player(self, state):
         new_player = int(not state[1])
-        new_state = (state[0], new_player, state[2])
+        new_state = (state[0], new_player)
         return new_state
 
     def game_over(self, state):

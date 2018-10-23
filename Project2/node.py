@@ -16,7 +16,7 @@ class Node:
     def u(self):
         N = self.parent.games
         num = math.log(N) if N > 1 else 1
-        u = math.sqrt(num/(1+self.games))
+        u = math.sqrt(num/(self.games))
         return u if u != 0 else 0.5
 
     def win_state(self):

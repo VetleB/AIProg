@@ -20,7 +20,6 @@ class Tree:
             if not leaf_node.win_state():
                 leaf_node.children = []
                 child_states = self.game.generate_child_states(leaf_node.state)
-
                 for child_state in child_states:
                     try:
                         child_node = self.tree[child_state]
@@ -36,7 +35,8 @@ class Tree:
 
     def back_prop(self, end_state, update_node):
         update_node.games += 1
-        update_node.wins += end_state[1]
+        end_value = 1 if end_state[1] == 0 else 0
+        update_node.wins += end_value
 
         if update_node.parent is not None:
             self.back_prop(end_state, update_node.parent)
