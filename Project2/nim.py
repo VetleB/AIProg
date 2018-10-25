@@ -1,6 +1,6 @@
 class Nim:
 
-    def __init__(self, stones, move_size, player_start, verbose=True):
+    def __init__(self, stones=3, move_size=2, player_start=1, verbose=True):
         if stones > 2:
             self.stones = stones
         else:
@@ -63,6 +63,7 @@ class Nim:
 
         if end and self.verbose:
             print(self.player_to_string(self.winner(self.state)), "wins")
+            print()
 
         return end
 
@@ -92,3 +93,6 @@ class Nim:
             return -(q-u)
         else:
             return q+u
+
+    def print_header(self):
+        print('There are', self.stones, 'stones in the heap. Max move size is', self.move_size, 'stones.')

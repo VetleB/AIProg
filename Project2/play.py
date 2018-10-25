@@ -1,23 +1,32 @@
-import nim
 import network
 import random
 
 
 class Play:
 
-    def __init__(self, stones, move_size, num_rollouts, player_start, batch_size=1, verbose=True):
-        self.stones = stones
-        self.move_size = move_size
-        self.player_start = player_start
+    def __init__(self, game_kwargs, game, num_rollouts, player_start, batch_size=1):
+        self.game_kwargs = game_kwargs
+        self.game_kwargs['player_start'] = player_start
 
+        self.game_manager = game
+        self.game = game(**game_kwargs)
+
+        self.player_start = player_start
         self.rollouts = num_rollouts
         self.batch_size = batch_size
-        self.verbose = verbose
 
     def play_game(self):
+        self.game.print_header()
+        print('They will play', self.batch_size, 'games.')
+        if self.player_start == -1:
+            print('Starting player is random.')
+        else:
+            print('Player', self.game.player_to_string(self.player_start), 'makes the first move.')
+
         white_wins = 0
         for batch in range(self.batch_size):
-            self.game = nim.Nim(self.stones, self.move_size, self.player_start, self.verbose)
+            self.game_kwargs['player_start'] = self.choose_starting_player()
+            self.game = self.game_manager(**self.game_kwargs)
             tree = network.Tree(self.game.get_initial_state(), self.game)
 
             while not self.game.actual_game_over():

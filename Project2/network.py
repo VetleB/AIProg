@@ -28,8 +28,9 @@ class Tree:
                         self.tree[child_state] = child_node
 
                     leaf_node.children.append(child_node)
-                    end_state = self.rollout(child_node)
-                    self.back_prop(end_state, child_node)
+                child_rollout_node = self.tree_search(leaf_node)
+                end_state = self.rollout(child_rollout_node)
+                self.back_prop(end_state, child_rollout_node)
             else:
                 self.back_prop(leaf_node.state, leaf_node)
 
