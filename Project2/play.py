@@ -30,15 +30,16 @@ class Play:
             tree = network.Tree(self.game.get_initial_state(), self.game)
 
             while not self.game.actual_game_over():
+                # Perform tree searches and rollouts
                 tree.simulate_game(self.game.state, self.rollouts)
+                # Find next actual move
                 move_node = tree.tree_policy(tree.tree[self.game.state], expl=False)
-                # options = [(n.state, n.ratio()) for n in move_node.parent.children]
-                # print(options)
+                # Make actual move
                 self.game.make_actual_move(move_node.state)
-                # print()
+
             white_wins += self.game.winner(self.game.state)
-            #print('Game', batch+1, 'winner:', self.game.winner(self.game.state))
-        print('White wins', white_wins, 'out of', self.batch_size, 'games (' + str(100*white_wins/self.batch_size) + ')%')
+
+        print('P1 wins', white_wins, 'out of', self.batch_size, 'games (' + str(100*white_wins/self.batch_size) + ')%')
 
     def choose_starting_player(self):
         if self.player_start == -1:

@@ -23,6 +23,7 @@ class Node:
     def win_state(self):
         return self.game.game_over(self.state)
 
+    # Pass Q and u value to the game and let it figure out how to combine them.
     def value(self, expl=True):
         return self.game.player_value(self.state, self.Q(), self.u(), expl)
 
