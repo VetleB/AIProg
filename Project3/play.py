@@ -1,13 +1,12 @@
-import nim
+import hex
 import network
 import random
 
 
 class Play:
 
-    def __init__(self, stones, move_size, num_rollouts, player_start, batch_size=1, verbose=True):
-        self.stones = stones
-        self.move_size = move_size
+    def __init__(self, dimensions, num_rollouts, player_start, batch_size=1, verbose=True):
+        self.dimensions = dimensions
         self.player_start = player_start
 
         self.rollouts = num_rollouts
@@ -17,7 +16,7 @@ class Play:
     def play_game(self):
         white_wins = 0
         for batch in range(self.batch_size):
-            self.game = nim.Nim(self.stones, self.move_size, self.choose_starting_player(), self.verbose)
+            self.game = hex.Hex(self.dimensions, self.choose_starting_player(), self.verbose)
             tree = network.Tree(self.game.get_initial_state(), self.game)
 
             while not self.game.actual_game_over():
@@ -29,7 +28,7 @@ class Play:
                 # print()
             white_wins += self.game.winner(self.game.state)
             #print('Game', batch+1, 'winner:', self.game.winner(self.game.state))
-        print('White wins', white_wins, 'out of', self.batch_size, 'games (' + str(100*white_wins/self.batch_size) + ')%')
+        print('Red wins', white_wins, 'out of', self.batch_size, 'games (' + str(100*white_wins/self.batch_size) + ')%')
 
     def choose_starting_player(self):
         if self.player_start == -1:
