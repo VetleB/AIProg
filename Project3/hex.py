@@ -2,9 +2,9 @@ from collections import deque
 
 class Hex:
 
-    def __init__(self, dim, player_start, verbose=True):
-        if dim in range(3, 9):
-            self.side_len = dim
+    def __init__(self, dimensions, player_start, verbose=True):
+        if dimensions in range(3, 9):
+            self.side_len = dimensions
         else:
             raise ValueError('Size must be between 3x3 and 8x8')
 
@@ -17,7 +17,7 @@ class Hex:
         self.verbose = verbose
 
     def get_initial_state(self):
-        empty_board = tuple([-1 for i in range(self.side_len**2)])
+        empty_board = tuple(['*' for i in range(self.side_len**2)])
         initial_state = (empty_board, self.player)
         return initial_state
 
@@ -27,10 +27,13 @@ class Hex:
         player = state[1]
 
         for i in range(len(state_list)):
-            if state_list[i] == -1:
-                child_state = state_list[:]
-                child_state[i] = player
-                child_state_list.append((tuple(child_state), player))
+            if state_list[i] == '*':
+                child_list = state_list[:]
+                child_list[i] = str(player)
+                child_tuple = tuple(child_list)
+                child_state = self.switch_player((child_tuple, player))
+
+                child_state_list.append(child_state)
 
         return child_state_list
 
@@ -38,15 +41,19 @@ class Hex:
         moving_player = self.player_to_string(self.state[1])
 
         move = None
+        board = self.state_deepen(self.state)
+        new_board = self.state_deepen(state)
         for i in range(self.side_len):
             for j in range(self.side_len):
-                if self.state[i][j] != state[i][j]:
+                if board[i][j] != new_board[i][j]:
                     move = (i, j)
 
         if self.verbose:
             print(moving_player, "placed a stone in position", move)
+            self.print_hex(state)
 
         self.state = state
+
 
     def player_to_string(self, player):
         return self.players[player]
@@ -56,6 +63,7 @@ class Hex:
 
         if end and self.verbose:
             print(self.player_to_string(self.winner(self.state)), "wins")
+            print()
 
         return end
 
@@ -71,22 +79,24 @@ class Hex:
 
     def game_over(self, state):
 
-        if state.count(-1) < (2*self.side_len)-1:
+        if state.count('*') > self.side_len**2 - ((2*self.side_len)-1):
             return False
 
         board = self.state_deepen(state)
 
+        #self.print_hex(state)
+
         for i in range(self.side_len):
             # Check for red victory
-            if board[0][i] == 0:
-                win, searched_board = self.bfs(board, (0, i), 0)
+            if board[0][i] == '1':
+                win, searched_board = self.bfs(board, (0, i), 1)
                 if win:
                     return True
                 board = searched_board
 
             # Check for black victory
-            if board[i][0] == 1:
-                win, searched_board = self.bfs(board, (i, 0), 1)
+            if board[i][0] == '0':
+                win, searched_board = self.bfs(board, (i, 0), 0)
                 if win:
                     return True
                 board = searched_board
@@ -96,30 +106,36 @@ class Hex:
     def bfs(self, board, root, player):
         dirs = [(-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0)]
 
-        row_or_col = player
+        row_or_col = 0 if player == 1 else 1
 
         queue = deque()
         queue.append(root)
-        board[root[0]][root[1]] = -1
+        test_board = board[:]
+        test_board[root[0]][root[1]] = '*'
 
         while len(queue):
             root = queue.popleft()
 
             for direction in dirs:
+                invalid = False
+
                 try:
                     x = root[0] + direction[0]
                     y = root[1] + direction[1]
 
-                    if board[x][y] == player:
+                    if x < 0 or y < 0:
+                        invalid = True
+
+                    if test_board[x][y] == str(player) and not invalid:
                         pos = (x, y)
                         if pos[row_or_col] == self.side_len-1:
-                            return True, board
+                            return True, test_board
                         queue.append(pos)
-                        board[x][y] = -1
+                        test_board[x][y] = '*'
                 except IndexError:
                     pass
 
-        return False, board
+        return False, test_board
 
     def state_deepen(self, state):
         board = []
@@ -127,7 +143,7 @@ class Hex:
         for i in range(self.side_len):
             row = []
             for j in range(self.side_len):
-                element = state[self.side_len*i+j]
+                element = state[0][self.side_len*i+j]
                 row.append(element)
             board.append(row)
 
@@ -139,3 +155,43 @@ class Hex:
             return -(q-u)
         else:
             return q+u
+
+    def print_header(self):
+        self.print_hex(self.state)
+
+    def print_hex(self, state):
+        top_diamond = ''
+        board = self.state_deepen(state)
+
+        for i in range(1, self.side_len+1):
+            top_diamond += ' '*(self.side_len-i)
+            x = i
+            y = -1
+            for j in range(i):
+                x -= 1
+                y += 1
+                top_diamond += str(board[x][y]) + ' '
+            top_diamond += '\n'
+
+        board = board[::-1]
+        board = [row[::-1] for row in board]
+
+        bottom_diamond = ''
+
+        for i in range(1, self.side_len):
+            x = i
+            y = -1
+            for j in range(i):
+                x -= 1
+                y += 1
+                bottom_diamond += str(board[x][y]) + ' '
+            bottom_diamond += ' '*(self.side_len-i-1)
+            bottom_diamond += '' if i == self.side_len-1 else '\n'
+
+        bottom_diamond = bottom_diamond[::-1]
+
+        diamond = top_diamond + bottom_diamond
+
+        print(diamond)
+
+
