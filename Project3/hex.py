@@ -1,4 +1,5 @@
 from collections import deque
+import itertools
 
 class Hex:
 
@@ -75,6 +76,32 @@ class Hex:
     def get_empty_case(self):
         return [0 for i in range(self.side_len**2)]
 
+    def case_to_nn_feature(self, case):
+
+        nn_board_positions = {
+            '*': [0,0] # Empty
+            , '1': [1,0] # Player 1
+            , '0': [0,1] # Player 2
+        }
+
+        nn_players = {
+            1: [1, 0]
+            , 0: [0, 1]
+        }
+
+        state = case[0]
+        label = case[1]
+
+        board = list(state[0])
+        nn_board = [nn_board_positions[c] for c in board]
+
+        player = state[1]
+        nn_player = nn_players[player]
+
+        nn_board.insert(0, nn_player)
+        nn_board_flat = list(itertools.chain(*nn_board))
+
+        return [nn_board_flat, label]
 
     def player_to_string(self, player):
         return self.players[player]

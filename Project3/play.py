@@ -34,7 +34,8 @@ class Play:
             while not self.game.actual_game_over():
                 # Perform tree searches and rollouts
                 case = tree.simulate_game(self.game.state, self.rollouts)
-                rbuf.append(case)
+                nn_case = self.game.case_to_nn_feature(case)
+                rbuf.append(nn_case)
                 # Find next actual move
                 move_node = tree.tree_policy(tree.tree[self.game.state], expl=False)
                 # Make actual move
