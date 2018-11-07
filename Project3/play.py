@@ -29,13 +29,18 @@ class Play:
             self.game = self.game_manager(**self.game_kwargs)
             tree = network.Tree(self.game.get_initial_state(), self.game)
 
+            rbuf = []
+
             while not self.game.actual_game_over():
                 # Perform tree searches and rollouts
-                tree.simulate_game(self.game.state, self.rollouts)
+                case = tree.simulate_game(self.game.state, self.rollouts)
+                rbuf.append(case)
                 # Find next actual move
                 move_node = tree.tree_policy(tree.tree[self.game.state], expl=False)
                 # Make actual move
                 self.game.make_actual_move(move_node.state)
+
+            print(rbuf)
 
             P1_wins += self.game.winner(self.game.state)
 

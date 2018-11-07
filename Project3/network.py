@@ -33,6 +33,19 @@ class Tree:
             else:
                 self.back_prop(leaf_node.state, leaf_node)
 
+        # Initialize empty distribution
+        distribution = self.game.get_empty_case()
+
+        for child in root.children:
+            index = self.game.get_move_index(root.state, child.state)
+            distribution[index] = child.games
+
+        # Normalize distribution
+        distribution = self.normalize(distribution)
+
+        case = (root.state, distribution)
+        return case
+
     def back_prop(self, end_state, update_node):
         update_node.games += 1
         end_value = 1 if end_state[1] == 0 else 0
@@ -72,3 +85,8 @@ class Tree:
                 best_val = val
         # print()
         return best_node
+
+    def normalize(self, vector):
+        vector_sum = sum(vector)
+
+        return [float(i)/vector_sum for i in vector]

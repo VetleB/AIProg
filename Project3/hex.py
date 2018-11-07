@@ -55,6 +55,27 @@ class Hex:
         self.state = state
 
 
+    def get_move(self, pre_state, post_state):
+        move = None
+        board = self.state_deepen(pre_state)
+        new_board = self.state_deepen(post_state)
+        for i in range(self.side_len):
+            for j in range(self.side_len):
+                if board[i][j] != new_board[i][j]:
+                    move = (i, j)
+
+        return move
+
+    def get_move_index(self, pre_state, post_state):
+
+        move = self.get_move(pre_state, post_state)
+
+        return move[0]*self.side_len + move[1]
+
+    def get_empty_case(self):
+        return [0 for i in range(self.side_len**2)]
+
+
     def player_to_string(self, player):
         return self.players[player]
 
