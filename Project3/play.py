@@ -1,5 +1,6 @@
 import network
 import random
+import anet
 
 
 class Play:
@@ -14,6 +15,8 @@ class Play:
         self.player_start = player_start
         self.rollouts = num_rollouts
         self.batch_size = batch_size
+
+        self.anet = anet.Anet()
 
     def play_game(self):
         self.game.print_header()
@@ -41,7 +44,9 @@ class Play:
                 # Make actual move
                 self.game.make_actual_move(move_node.state)
 
-            print(rbuf)
+            # print(rbuf)
+
+            self.anet.train_on_rbuf_cases(rbuf)
 
             P1_wins += self.game.winner(self.game.state)
 

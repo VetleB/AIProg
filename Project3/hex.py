@@ -205,7 +205,9 @@ class Hex:
             return q+u
 
     def print_header(self):
-        self.print_hex(self.state)
+        print("Red vs Black")
+        if self.verbose:
+            self.print_hex(self.state)
 
     def print_hex(self, state):
         top_diamond = ''
@@ -241,5 +243,3 @@ class Hex:
         diamond = top_diamond + bottom_diamond
 
         print(diamond)
-
-
