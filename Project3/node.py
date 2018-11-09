@@ -11,13 +11,14 @@ class Node:
         self.game = game
 
     def Q(self):
-        return self.wins/self.games
+        q = self.wins/self.games if self.games > 0 else 0.5
+        return q
 
     def u(self):
         N = self.parent.games
         num = math.log(N) if N > 1 else 1
-        u = math.sqrt(num/(self.games))
-        return u if u != 0 else 0.5
+        u = math.sqrt(num/(1+self.games))
+        return u
 
     def win_state(self):
         return self.game.game_over(self.state)

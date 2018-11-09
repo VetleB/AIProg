@@ -107,6 +107,8 @@ class Hex:
 
         return nn_board_flat
 
+
+    # TODO: Fix this shit, in the act of eliminating invalid moves, it all turns into 0
     def anet_choose_child(self, state, anet):
         distribution = anet.distribution([self.state_to_nn_state(state)])
         distribution = list(distribution)[0]

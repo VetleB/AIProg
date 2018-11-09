@@ -29,8 +29,13 @@ class Tree:
                         self.tree[child_state] = child_node
 
                     leaf_node.children.append(child_node)
-                    end_state = self.rollout(child_node)
-                    self.back_prop(end_state, child_node)
+
+                # Perform rollout on one of the newly created child nodes
+                child_rollout_node = self.tree_search(leaf_node)
+                end_state = self.rollout(child_rollout_node)
+                # Propagate information back up from the child node
+                self.back_prop(end_state, child_rollout_node)
+
             else:
                 self.back_prop(leaf_node.state, leaf_node)
 
