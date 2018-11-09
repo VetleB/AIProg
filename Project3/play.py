@@ -6,7 +6,7 @@ import pickle
 
 class Play:
 
-    def __init__(self, game_kwargs, game, num_rollouts, player_start, batch_size=1):
+    def __init__(self, game_kwargs, game, num_rollouts, player_start, batch_size=1, nn_model=None):
         self.game_kwargs = game_kwargs
         self.game_kwargs['player_start'] = player_start
 
@@ -17,9 +17,12 @@ class Play:
         self.rollouts = num_rollouts
         self.batch_size = batch_size
 
+        self.nn_model = nn_model
         self.anet = anet.Anet()
+        if self.nn_model:
+            self.anet.load_model(self.nn_model)
 
-    def play_game(self):
+    def play_game(self, pre_train=False):
         self.game.print_header()
         print('They will play', self.batch_size, 'games.')
         if self.player_start == -1:
@@ -39,8 +42,7 @@ class Play:
             f.close()
             all_cases = []
 
-
-        if 1:
+        if pre_train:
             self.pre_train(epochs=500)
             self.anet.accuracy(all_cases)
 
@@ -49,7 +51,7 @@ class Play:
             self.game = self.game_manager(**self.game_kwargs)
             tree = network.Tree(self.game.get_initial_state(), self.game, self.anet)
 
-            #rbuf = []
+            # rbuf = []
 
             while not self.game.actual_game_over():
                 # Perform tree searches and rollouts
@@ -65,15 +67,17 @@ class Play:
                 # Make actual move
                 self.game.make_actual_move(move_state)
 
-            #random.shuffle(rbuf)
+            # random.shuffle(rbuf)
 
-            #self.anet.train_on_cases(rbuf)
+            # self.anet.train_on_cases(rbuf)
 
             P1_wins += self.game.winner(self.game.state)
 
-            #all_cases.extend(rbuf)
+            # all_cases.extend(rbuf)
 
         self.anet.accuracy(all_cases)
+
+        self.anet.save_model(self.nn_model)
 
         with open(self.game.get_file_name(), 'wb') as f:
             pickle.dump(all_cases, f)

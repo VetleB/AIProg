@@ -1,4 +1,4 @@
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense
 import numpy
 
@@ -36,3 +36,13 @@ class Anet:
         if vector_sum == 0:
             return list(vector)
         return [float(i)/vector_sum for i in vector]
+
+    def load_model(self, file_name):
+        try:
+            loaded_model = load_model(file_name + '.h5')
+            self.model = loaded_model
+        except:
+            pass
+
+    def save_model(self, file_name):
+        self.model.save(file_name + '.h5')
