@@ -6,7 +6,7 @@ def main():
     game = hex.Hex
     rollouts = 500
     player_start = -1
-    batch_size = 50
+    batch_size = 10
     verbose = False
 
     game_kwargs = {'dimensions': dimensions, 'verbose': verbose}

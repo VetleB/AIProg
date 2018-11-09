@@ -28,12 +28,18 @@ class Play:
             print('Player', self.game.player_to_string(self.player_start), 'makes the first move.')
 
         P1_wins = 0
+        try:
+            with open(self.game.get_file_name(), 'rb') as f:
+                try:
+                    all_cases = pickle.load(f)
+                except:
+                    all_cases = []
+        except (FileNotFoundError, EOFError):
+            f = open(self.game.get_file_name(), 'w')
+            f.close()
+            all_cases = []
 
-        with open(self.game.get_file_name(), 'rb') as f:
-            try:
-                all_cases = pickle.load(f)
-            except:
-                all_cases = []
+
         if 1:
             self.pre_train(epochs=500)
             self.anet.accuracy(all_cases)
