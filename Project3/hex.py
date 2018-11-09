@@ -78,6 +78,13 @@ class Hex:
 
     def case_to_nn_feature(self, case):
 
+        nn_board_flat = self.state_to_nn_state(case[0])
+
+        label = case[1]
+
+        return [nn_board_flat, label]
+
+    def state_to_nn_state(self, state):
         nn_board_positions = {
             '*': [0,0] # Empty
             , '1': [1,0] # Player 1
@@ -89,9 +96,6 @@ class Hex:
             , 0: [0, 1]
         }
 
-        state = case[0]
-        label = case[1]
-
         board = list(state[0])
         nn_board = [nn_board_positions[c] for c in board]
 
@@ -101,7 +105,29 @@ class Hex:
         nn_board.insert(0, nn_player)
         nn_board_flat = list(itertools.chain(*nn_board))
 
-        return [nn_board_flat, label]
+        return nn_board_flat
+
+    def anet_choose_child(self, state, anet):
+        distribution = anet.distribution([self.state_to_nn_state(state)])
+        distribution = list(distribution)[0]
+
+        board = list(state[0])
+
+        #print(distribution)
+        for i in range(len(board)):
+            if board[i] != '*':
+                distribution[i] = 0
+
+        #print(board, distribution)
+
+        distribution = anet.normalize(distribution)
+        position = distribution.index(max(distribution))
+
+        board[position] = str(state[1])
+
+        new_state = (board, state[1])
+
+        return self.switch_player(new_state)
 
     def player_to_string(self, player):
         return self.players[player]

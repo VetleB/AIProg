@@ -4,10 +4,11 @@ import random
 
 class Tree:
 
-    def __init__(self, root, game):
+    def __init__(self, root, game, anet):
         self.root = node.Node(root, None, game)
         self.tree = {root: self.root}
         self.game = game
+        self.anet = anet
 
     def simulate_game(self, state, rollouts):
         root = self.tree[state]
@@ -41,7 +42,7 @@ class Tree:
             distribution[index] = child.games
 
         # Normalize distribution
-        distribution = self.normalize(distribution)
+        distribution = self.anet.normalize(distribution)
 
         case = (root.state, distribution)
         return case
@@ -58,9 +59,10 @@ class Tree:
         state = leaf_node.state
 
         while not self.game.game_over(state):
-            options = self.game.generate_child_states(state)
-            choice = random.choice(options)
-            state = choice
+            state = self.game.anet_choose_child(state, self.anet)
+            # options = self.game.generate_child_states(state)
+            # choice = random.choice(options)
+            # state = choice
 
         return state
 
@@ -70,7 +72,6 @@ class Tree:
             old_node = node
             node = self.tree_policy(node)
             node.parent = old_node
-        # print()
         return node
 
     def tree_policy(self, node, expl=True):
@@ -85,8 +86,3 @@ class Tree:
                 best_val = val
         # print()
         return best_node
-
-    def normalize(self, vector):
-        vector_sum = sum(vector)
-
-        return [float(i)/vector_sum for i in vector]

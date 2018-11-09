@@ -27,10 +27,13 @@ class Play:
             print('Player', self.game.player_to_string(self.player_start), 'makes the first move.')
 
         P1_wins = 0
+
+        all_cases = []
+
         for batch in range(self.batch_size):
             self.game_kwargs['player_start'] = self.choose_starting_player()
             self.game = self.game_manager(**self.game_kwargs)
-            tree = network.Tree(self.game.get_initial_state(), self.game)
+            tree = network.Tree(self.game.get_initial_state(), self.game, self.anet)
 
             rbuf = []
 
@@ -49,6 +52,10 @@ class Play:
             self.anet.train_on_rbuf_cases(rbuf)
 
             P1_wins += self.game.winner(self.game.state)
+
+            all_cases.extend(rbuf)
+
+        self.anet.accuracy(all_cases)
 
         print('P1 wins', P1_wins, 'out of', self.batch_size, 'games (' + str(100*P1_wins/self.batch_size) + ')%')
 
