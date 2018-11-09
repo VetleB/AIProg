@@ -5,8 +5,8 @@ def main():
     dimensions = 4
     game = hex.Hex
     rollouts = 500
-    player_start = -1
-    batch_size = 10
+    player_start = 0
+    batch_size = 100
     verbose = False
 
     game_kwargs = {'dimensions': dimensions, 'verbose': verbose}

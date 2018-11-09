@@ -49,25 +49,29 @@ class Play:
             self.game = self.game_manager(**self.game_kwargs)
             tree = network.Tree(self.game.get_initial_state(), self.game, self.anet)
 
-            rbuf = []
+            #rbuf = []
 
             while not self.game.actual_game_over():
                 # Perform tree searches and rollouts
-                case = tree.simulate_game(self.game.state, self.rollouts)
-                nn_case = self.game.case_to_nn_feature(case)
-                rbuf.append(nn_case)
+                # case = tree.simulate_game(self.game.state, self.rollouts)
+                # nn_case = self.game.case_to_nn_feature(case)
+                # rbuf.append(nn_case)
+
                 # Find next actual move
-                move_node = tree.tree_policy(tree.tree[self.game.state], expl=False)
+                # move_node = tree.tree_policy(tree.tree[self.game.state], expl=False)
+
+                move_state = self.game.anet_choose_child(self.game.state, self.anet)
+
                 # Make actual move
-                self.game.make_actual_move(move_node.state)
+                self.game.make_actual_move(move_state)
 
-            random.shuffle(rbuf)
+            #random.shuffle(rbuf)
 
-            self.anet.train_on_cases(rbuf)
+            #self.anet.train_on_cases(rbuf)
 
             P1_wins += self.game.winner(self.game.state)
 
-            all_cases.extend(rbuf)
+            #all_cases.extend(rbuf)
 
         self.anet.accuracy(all_cases)
 
