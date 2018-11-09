@@ -42,10 +42,13 @@ class Tree:
         # Initialize empty distribution
         distribution = self.game.get_empty_case()
 
+        # Put the visit counts in the right place in the distribution
+        #print(root)
         for child in root.children:
             index = self.game.get_move_index(root.state, child.state)
             distribution[index] = child.games
-
+        #print(distribution)
+        
         # Normalize distribution
         distribution = self.anet.normalize(distribution)
 
@@ -64,6 +67,7 @@ class Tree:
         state = leaf_node.state
 
         while not self.game.game_over(state):
+            # print(state)
             state = self.game.anet_choose_child(state, self.anet)
             # options = self.game.generate_child_states(state)
             # choice = random.choice(options)

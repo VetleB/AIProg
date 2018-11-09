@@ -1,6 +1,7 @@
 import network
 import random
 import anet
+import pickle
 
 
 class Play:
@@ -28,7 +29,14 @@ class Play:
 
         P1_wins = 0
 
-        all_cases = []
+        with open(self.game.get_file_name(), 'rb') as f:
+            try:
+                all_cases = pickle.load(f)
+            except:
+                all_cases = []
+        if 1:
+            self.pre_train(epochs=500)
+            self.anet.accuracy(all_cases)
 
         for batch in range(self.batch_size):
             self.game_kwargs['player_start'] = self.choose_starting_player()
@@ -47,15 +55,18 @@ class Play:
                 # Make actual move
                 self.game.make_actual_move(move_node.state)
 
-            # print(rbuf)
+            random.shuffle(rbuf)
 
-            self.anet.train_on_rbuf_cases(rbuf)
+            self.anet.train_on_cases(rbuf)
 
             P1_wins += self.game.winner(self.game.state)
 
             all_cases.extend(rbuf)
 
         self.anet.accuracy(all_cases)
+
+        with open(self.game.get_file_name(), 'wb') as f:
+            pickle.dump(all_cases, f)
 
         print('P1 wins', P1_wins, 'out of', self.batch_size, 'games (' + str(100*P1_wins/self.batch_size) + ')%')
 
@@ -64,3 +75,8 @@ class Play:
             n = random.random()
             return 0 if n < 0.5 else 1
         return self.player_start
+
+    def pre_train(self, epochs):
+        with open(self.game.get_file_name(), 'rb') as f:
+            cases = pickle.load(f)
+            self.anet.train_on_cases(cases, epochs)

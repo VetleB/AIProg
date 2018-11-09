@@ -2,13 +2,14 @@ import play
 import hex
 
 def main():
-    game_kwargs = {'dimensions': 4, 'verbose': False}
+    dimensions = 4
     game = hex.Hex
-    rollouts = 600
-    player_start = 1
-    batch_size = 1
+    rollouts = 500
+    player_start = -1
+    batch_size = 50
     verbose = False
 
+    game_kwargs = {'dimensions': dimensions, 'verbose': verbose}
     p = play.Play(game_kwargs, game, rollouts, player_start, batch_size)
     p.play_game()
 

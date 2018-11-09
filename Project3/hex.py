@@ -112,7 +112,7 @@ class Hex:
     def anet_choose_child(self, state, anet):
         distribution = anet.distribution([self.state_to_nn_state(state)])
         distribution = list(distribution)[0]
-
+        # print(state, distribution)
         board = list(state[0])
 
         #print(distribution)
@@ -271,3 +271,6 @@ class Hex:
         diamond = top_diamond + bottom_diamond
 
         print(diamond)
+
+    def get_file_name(self):
+        return 'anet_cases_' + str(self.side_len) + 'x' + str(self.side_len) + '.p'
