@@ -125,11 +125,20 @@ class Hex:
         distribution = anet.normalize(distribution)
         position = distribution.index(max(distribution))
 
-        board[position] = str(state[1])
+        return self.make_move(state, position)
 
-        new_state = (board, state[1])
+    def make_move(self, state, move):
+        board = list(state[0])
 
-        return self.switch_player(new_state)
+        board[move] = str(state[1])
+
+        new_state = self.switch_player((board, state[1]))
+
+        return new_state
+
+    def request_human_move(self, state):
+        move = int(input("Move: "))
+        return self.make_move(state, move)
 
     def player_to_string(self, player):
         return self.players[player]
@@ -274,3 +283,6 @@ class Hex:
 
     def get_file_name(self):
         return 'anet_cases_' + str(self.side_len) + 'x' + str(self.side_len) + '.p'
+
+    def get_player(self, state):
+        return state[1]

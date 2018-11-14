@@ -22,7 +22,7 @@ class Play:
         if self.nn_model:
             self.anet.load_model(self.nn_model)
 
-    def play_game(self, pre_train=False):
+    def play_game(self, run_train=True, pre_train=False):
         self.game.print_header()
         print('They will play', self.batch_size, 'games.')
         if self.player_start == -1:
@@ -39,7 +39,6 @@ class Play:
                     all_cases = []
         except (FileNotFoundError, EOFError):
             f = open(self.game.get_file_name(), 'w')
-            f.close()
             all_cases = []
 
         if pre_train:
@@ -49,35 +48,38 @@ class Play:
         for batch in range(self.batch_size):
             self.game_kwargs['player_start'] = self.choose_starting_player()
             self.game = self.game_manager(**self.game_kwargs)
-            tree = network.Tree(self.game.get_initial_state(), self.game, self.anet)
 
-            # rbuf = []
+            if run_train:
+                tree = network.Tree(self.game.get_initial_state(), self.game, self.anet)
+                rbuf = []
 
             while not self.game.actual_game_over():
-                # Perform tree searches and rollouts
-                # case = tree.simulate_game(self.game.state, self.rollouts)
-                # nn_case = self.game.case_to_nn_feature(case)
-                # rbuf.append(nn_case)
+                if run_train:
+                    # Perform tree searches and rollouts
+                    case = tree.simulate_game(self.game.state, self.rollouts)
+                    nn_case = self.game.case_to_nn_feature(case)
+                    rbuf.append(nn_case)
 
-                # Find next actual move
-                # move_node = tree.tree_policy(tree.tree[self.game.state], expl=False)
-
-                move_state = self.game.anet_choose_child(self.game.state, self.anet)
+                    # Find next actual move
+                    move_node = tree.tree_policy(tree.tree[self.game.state], expl=False)
+                    move_state = move_node.state
+                else:
+                    move_state = self.game.anet_choose_child(self.game.state, self.anet)
 
                 # Make actual move
                 self.game.make_actual_move(move_state)
 
-            # random.shuffle(rbuf)
-
-            # self.anet.train_on_cases(rbuf)
+            if run_train:
+                random.shuffle(rbuf)
+                self.anet.train_on_cases(rbuf)
+                all_cases.extend(rbuf)
 
             P1_wins += self.game.winner(self.game.state)
 
-            # all_cases.extend(rbuf)
+        if run_train:
+            self.anet.accuracy(all_cases)
 
-        self.anet.accuracy(all_cases)
-
-        self.anet.save_model(self.nn_model)
+            self.anet.save_model(self.nn_model)
 
         with open(self.game.get_file_name(), 'wb') as f:
             pickle.dump(all_cases, f)
