@@ -1,26 +1,40 @@
 import play
 import versus
 import hex
+import anet
 
 def main():
-    dimensions = 4
+    side_length = 4
     game = hex.Hex
-    rollouts = 500
+    rollouts = (10, 's')
     player_start = 0
     batch_size = 1
-    num_matches = 1
-    verbose = True
-    nn_model = 'test1'
-    pre_train = False
+    num_matches = 1000
+    verbose = False
+    game_kwargs = {'side_length': side_length, 'verbose': verbose}
+
+    nn_model = None
+    input_layer_size = 2*side_length**2+2
+    output_size = side_length**2
+    anet_kwargs = {'layers': [input_layer_size, 120, 64, output_size]
+                , 'haf': 'tanh'
+                , 'oaf': 'tanh'
+                , 'loss': 'mean_squared_error'
+                , 'optimizer': 'SGD'
+                , 'model_name': 'anet_4x4'
+                , 'pre_train_epochs': 500}
+    pre_train = True
     run_train = False
 
-    game_kwargs = {'dimensions': dimensions, 'verbose': verbose}
-    p = play.Play(game_kwargs, game, rollouts, player_start, batch_size, nn_model=nn_model)
-    p.play_game(run_train=run_train, pre_train=pre_train)
 
-    anet_player = p.anet
+    #p = play.Play(game_kwargs, game, rollouts, player_start, batch_size, anet_kwargs=anet_kwargs)
+    #p.play_game(run_train=run_train, pre_train=pre_train)
 
-    v = versus.Versus(game_kwargs, game, num_matches, player_start, player2=anet_player)
+    #anet_player = p.anet
+    anet_player = anet.Anet(**anet_kwargs)
+    game_kwargs = {'side_length': side_length, 'verbose': False}
+
+    v = versus.Versus(game_kwargs, game, num_matches, player_start, player1='random', player2=anet_player)
     v.match()
 
 main()

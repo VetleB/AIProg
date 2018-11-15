@@ -1,11 +1,12 @@
 from collections import deque
 import itertools
+import random
 
 class Hex:
 
-    def __init__(self, dimensions, player_start, verbose=True):
-        if dimensions in range(3, 9):
-            self.side_len = dimensions
+    def __init__(self, side_length, player_start, verbose=True):
+        if side_length in range(3, 9):
+            self.side_len = side_length
         else:
             raise ValueError('Size must be between 3x3 and 8x8')
 
@@ -124,7 +125,6 @@ class Hex:
 
         distribution = anet.normalize(distribution)
         position = distribution.index(max(distribution))
-
         return self.make_move(state, position)
 
     def make_move(self, state, move):
@@ -137,7 +137,26 @@ class Hex:
         return new_state
 
     def request_human_move(self, state):
-        move = int(input("Move: "))
+        move = input("Move: ")
+        if move == '':
+            return self.request_random_move(state)
+        else:
+            move = int(move)
+        while state[0][move] != '*':
+            print('Invalid move')
+            move = input("Move: ")
+            if move == '':
+                return self.request_random_move(state)
+            else:
+                move = int(move)
+        return self.make_move(state, move)
+
+    def request_random_move(self, state):
+        moves = []
+        for i in range(self.side_len**2):
+            if state[0][i] == '*':
+                moves.append(i)
+        move = random.choice(moves)
         return self.make_move(state, move)
 
     def player_to_string(self, player):

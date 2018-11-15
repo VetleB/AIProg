@@ -6,7 +6,7 @@ import pickle
 
 class Play:
 
-    def __init__(self, game_kwargs, game, num_rollouts, player_start, batch_size=1, nn_model=None):
+    def __init__(self, game_kwargs, game, rollouts, player_start, batch_size, anet_kwargs, pre_train_epochs=250):
         self.game_kwargs = game_kwargs
         self.game_kwargs['player_start'] = player_start
 
@@ -14,13 +14,11 @@ class Play:
         self.game = game(**game_kwargs)
 
         self.player_start = player_start
-        self.rollouts = num_rollouts
+        self.rollouts = rollouts
         self.batch_size = batch_size
 
-        self.nn_model = nn_model
-        self.anet = anet.Anet()
-        if self.nn_model:
-            self.anet.load_model(self.nn_model)
+        self.anet = anet.Anet(**anet_kwargs)
+        self.pre_train_epochs = pre_train_epochs
 
     def play_game(self, run_train=True, pre_train=False):
         self.game.print_header()
@@ -42,7 +40,7 @@ class Play:
             all_cases = []
 
         if pre_train:
-            self.pre_train(epochs=500)
+            self.pre_train(epochs=self.pre_train_epochs)
             self.anet.accuracy(all_cases)
 
         for batch in range(self.batch_size):
@@ -79,7 +77,7 @@ class Play:
         if run_train:
             self.anet.accuracy(all_cases)
 
-            self.anet.save_model(self.nn_model)
+            self.anet.save_model()
 
         with open(self.game.get_file_name(), 'wb') as f:
             pickle.dump(all_cases, f)
@@ -95,4 +93,4 @@ class Play:
     def pre_train(self, epochs):
         with open(self.game.get_file_name(), 'rb') as f:
             cases = pickle.load(f)
-            self.anet.train_on_cases(cases, epochs)
+            self.anet.pre_train(cases)

@@ -37,12 +37,17 @@ class Versus:
                 player = self.players[self.game.get_player(self.game.state)]
                 if (isinstance(player, anet.Anet)):
                     move_state = self.game.anet_choose_child(self.game.state, player)
-                else:
+                elif player=='human':
                     move_state = self.game.request_human_move(self.game.state)
+                elif player == 'random':
+                    move_state = self.game.request_random_move(self.game.state)
                 # Make actual move
                 self.game.make_actual_move(move_state)
 
             P1_wins += self.game.winner(self.game.state)
+
+        print('P1 wins', P1_wins, 'out of', self.num_matches, 'games (' + str(100*P1_wins/self.num_matches) + ')%')
+
 
     def choose_starting_player(self):
         if self.player_start == -1:

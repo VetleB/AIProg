@@ -1,5 +1,6 @@
 import node
 import random
+import time
 
 
 class Tree:
@@ -13,6 +14,28 @@ class Tree:
     def simulate_game(self, state, rollouts):
         root = self.tree[state]
 
+        if rollouts[1] == 'r':
+            self.rollouts_amount(root, rollouts[0])
+        elif rollouts[1] == 's':
+            self.rollouts_time(root, rollouts[0])
+
+        # Initialize empty distribution
+        distribution = self.game.get_empty_case()
+
+        # Put the visit counts in the right place in the distribution
+        #print(root)
+        for child in root.children:
+            index = self.game.get_move_index(root.state, child.state)
+            distribution[index] = child.games
+        #print(distribution)
+
+        # Normalize distribution
+        distribution = self.anet.normalize(distribution)
+
+        case = (root.state, distribution)
+        return case
+
+    def rollouts_amount(self, root, rollouts):
         for rollout in range(rollouts):
             leaf_node = self.tree_search(root)
             # print(leaf_node.state)
@@ -39,21 +62,34 @@ class Tree:
             else:
                 self.back_prop(leaf_node.state, leaf_node)
 
-        # Initialize empty distribution
-        distribution = self.game.get_empty_case()
+    def rollouts_time(self, root, time_per_move):
+        start_time = time.time()
+        while time.time()-start_time < time_per_move:
+            leaf_node = self.tree_search(root)
+            # print(leaf_node.state)
+            # print()
 
-        # Put the visit counts in the right place in the distribution
-        #print(root)
-        for child in root.children:
-            index = self.game.get_move_index(root.state, child.state)
-            distribution[index] = child.games
-        #print(distribution)
-        
-        # Normalize distribution
-        distribution = self.anet.normalize(distribution)
+            if not leaf_node.win_state():
+                leaf_node.children = []
+                child_states = self.game.generate_child_states(leaf_node.state)
+                for child_state in child_states:
+                    try:
+                        child_node = self.tree[child_state]
+                    except KeyError:
+                        child_node = node.Node(child_state, leaf_node, self.game)
+                        self.tree[child_state] = child_node
 
-        case = (root.state, distribution)
-        return case
+                    leaf_node.children.append(child_node)
+
+                # Perform rollout on one of the newly created child nodes
+                child_rollout_node = self.tree_search(leaf_node)
+                end_state = self.rollout(child_rollout_node)
+                # Propagate information back up from the child node
+                self.back_prop(end_state, child_rollout_node)
+
+            else:
+                self.back_prop(leaf_node.state, leaf_node)
+
 
     def back_prop(self, end_state, update_node):
         update_node.games += 1
