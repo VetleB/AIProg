@@ -21,7 +21,7 @@ class Versus:
 
     def match(self):
         self.game.print_header()
-        print('They will play', self.num_matches, 'games.')
+        print('They will play', self.num_matches, 'versus games.')
         if self.player_start == -1:
             print('Starting player is random.')
         else:
@@ -39,7 +39,8 @@ class Versus:
                     move_state = self.game.anet_choose_child(self.game.state, player)
                 elif player=='human':
                     move_state = self.game.request_human_move(self.game.state)
-                elif player == 'random':
+                # If no player given, make random moves
+                else:
                     move_state = self.game.request_random_move(self.game.state)
                 # Make actual move
                 self.game.make_actual_move(move_state)
