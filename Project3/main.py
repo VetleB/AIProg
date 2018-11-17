@@ -4,27 +4,43 @@ import hex
 import anet
 
 def main():
-    side_length = 4
+
+    anet_layers = {
+        3: [120, 64]
+        ,4: [120, 64]
+        ,5: [200, 128, 64]
+    }
+
+
+    ###################
+    # Game parameters #
+    ###################
+    side_length = 5
     rollouts = (500, 'r')   # r -> amount ; s -> seconds
-    player_start = -1       # -1 -> random
-    verbose = True
+    player_start = 1       # -1 -> random
+    verbose = False
 
     lrate = 0.01
     optimizer = 'sgd'
     haf = 'sigmoid'
     oaf = 'tanh'
     loss = 'mean_squared_error'
-    hidden_layers = [120, 64]
+    hidden_layers = anet_layers[side_length]
     load_existing = False
 
     play_game = True
-    batch_size = 1
+    batch_size = 50
 
     play_versus = False
     num_versus_matches = 1000
     pre_train = True
     pre_train_epochs = 250
 
+
+
+    #########
+    # Setup #
+    #########
 
     game = hex.Hex
     game_kwargs = {'side_length': side_length, 'verbose': verbose}
@@ -46,6 +62,11 @@ def main():
         , 'load_existing': load_existing}
 
 
+
+    ############
+    # Gameplay #
+    ############
+
     p = play.Play(game_kwargs, game, rollouts, player_start, batch_size, anet_kwargs=anet_kwargs)
 
     if play_game:
@@ -61,5 +82,5 @@ def main():
         v.match()
 
 
-
-main()
+if __name__ == '__main__':
+    main()

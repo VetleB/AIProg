@@ -61,12 +61,13 @@ class Play:
 
             P1_wins += self.game.winner(self.game.state)
 
+            with open(self.game.get_file_name(), 'wb') as f:
+                pickle.dump(rbuf, f)
+
         self.anet.accuracy(all_cases)
 
         self.anet.save_model()
 
-        with open(self.game.get_file_name(), 'wb') as f:
-            pickle.dump(all_cases, f)
 
         print('P1 wins', P1_wins, 'out of', self.batch_size, 'games (' + str(100*P1_wins/self.batch_size) + ')%')
 
