@@ -1,21 +1,30 @@
 from keras.models import Sequential, load_model
 from keras.layers import Dense
+from keras import optimizers
 import numpy
 
 class Anet:
 
-    def __init__(self, layers, haf, oaf, loss, optimizer, model_name, pre_train_epochs=250):
+    def __init__(self, layers, haf, oaf, loss, optimizer, lrate, model_name, pre_train_epochs=250, load_existing=False):
+
+        opts = {'sgd': optimizers.SGD
+            ,'adagrad': optimizers.Adagrad
+            ,'adam': optimizers.Adam
+            ,'rms': optimizers.RMSprop}
+
         self.file_name = model_name
         self.pre_train_epochs = pre_train_epochs
         self.model = None
-        self.load_model()
+        if load_existing:
+            self.load_model()
         if not self.model:
             self.model = Sequential()
             self.model.add(Dense(layers[1], activation=haf, input_dim=layers[0]))
             for layer in layers[2:-1]:
-                self.model.add(Dense(layer, activation=oaf))
+                self.model.add(Dense(layer, activation=haf))
             self.model.add(Dense(layers[-1], activation=oaf))
-            self.model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
+            optmzr = opts[optimizer](lrate)
+            self.model.compile(loss=loss, optimizer=optmzr, metrics=['accuracy'])
 
     def train_on_cases(self, cases, epochs=1):
         features = numpy.array([case[0] for case in cases])
