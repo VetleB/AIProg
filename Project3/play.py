@@ -44,6 +44,9 @@ class Play:
                 topp_save_batches.append(i)
             topp_save_batches.append(self.batch_size)
 
+        # TODO: remember
+        #rbuf = []
+
         for batch in range(self.batch_size):
 
             if topp and (batch in topp_save_batches):
@@ -54,6 +57,8 @@ class Play:
             self.game = self.game_manager(**self.game_kwargs)
 
             tree = network.Tree(self.game.get_initial_state(), self.game, self.anet)
+
+            # TODO: remember
             rbuf = []
 
             while not self.game.actual_game_over():
@@ -70,6 +75,8 @@ class Play:
                 self.game.make_actual_move(move_state)
 
             random.shuffle(rbuf)
+
+            # TODO: remember
             self.anet.train_on_cases(rbuf, epochs=self.train_epochs)
 
             all_cases.extend(rbuf)
@@ -81,7 +88,9 @@ class Play:
         with open(self.game.get_file_name(), 'wb') as f:
             pickle.dump(all_cases, f)
 
-        self.anet.accuracy(all_cases)
+        #self.anet.train_on_cases(rbuf, epochs=self.train_epochs)
+        #print(len(rbuf))
+        # self.anet.accuracy(all_cases)
 
         print('P1 wins', P1_wins, 'out of', self.batch_size, 'games (' + str(100*P1_wins/self.batch_size) + ')%')
 

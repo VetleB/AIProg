@@ -23,25 +23,27 @@ def main():
 
     play_game = True
     batch_size = 100
-    train_epochs = 250
-    topp_training = True
+    train_epochs = 50
+    topp_training = False
     topp_k = 5
 
     play_versus = True
     num_versus_matches = 1000
     pre_train = False
-    pre_train_epochs = 1
+    pre_train_epochs = 50
+
+    run_topp = False
 
     ###################
     # Anet parameters #
     ###################
-    lrate = 0.01
+    lrate = 0.1
     optimizer = 'adagrad'
-    haf = 'tanh'
-    oaf = 'tanh'
+    haf = 'sigmoid'
+    oaf = 'sigmoid'
     loss = 'mean_squared_error'
     hidden_layers = anet_layers[side_length]
-    load_existing = False
+    load_existing = True
     anet_name = None
 
 
@@ -88,8 +90,8 @@ def main():
             anet_player.pre_train(p.get_all_cases())
         v.match()
 
-    if topp:
-        topp_ = topp.Topp()
+    if play_game and run_topp:
+        topp_ = topp.Topp(list_of_topps)
 
 if __name__ == '__main__':
     main()

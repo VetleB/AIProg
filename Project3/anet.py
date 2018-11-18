@@ -1,6 +1,7 @@
 from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras import optimizers
+import random
 import numpy
 
 class Anet:
@@ -65,7 +66,9 @@ class Anet:
         self.model.save(self.path + self.file_name + '.h5')
 
     def pre_train(self, cases):
-        self.train_on_cases(cases, self.pre_train_epochs)
+        random.shuffle(cases)
+        frac_of_cases = cases[0:1000]
+        self.train_on_cases(frac_of_cases, self.pre_train_epochs)
         self.save_model()
 
     def topp_save(self, batch):
