@@ -5,16 +5,15 @@ import numpy
 
 class Anet:
 
-    def __init__(self, layers, haf, oaf, loss, optimizer, lrate, model_name, pre_train_epochs=250, load_existing=False):
+    def __init__(self, layers, model_name, haf='tanh', oaf='tanh', loss='mean_squared_error', optimizer='sgd', lrate=0.01, pre_train_epochs=250, load_existing=False):
 
         opts = {'sgd': optimizers.SGD
             ,'adagrad': optimizers.Adagrad
             ,'adam': optimizers.Adam
             ,'rms': optimizers.RMSprop}
 
-        self.anet_folder = 'saved_anets/'
+        self.path = 'saved_anets/'
         self.file_name = model_name
-        self.path = self.anet_folder + self.file_name
         self.pre_train_epochs = pre_train_epochs
         self.model = None
         if load_existing:
@@ -28,7 +27,7 @@ class Anet:
             optmzr = opts[optimizer](lrate)
             self.model.compile(loss=loss, optimizer=optmzr, metrics=['accuracy'])
 
-    def train_on_cases(self, cases, epochs=1):
+    def train_on_cases(self, cases, epochs=100):
         features = numpy.array([case[0] for case in cases])
         targets = numpy.array([case[1] for case in cases])
 
@@ -56,20 +55,21 @@ class Anet:
 
     def load_model(self):
         try:
-            loaded_model = load_model(self.path + '.h5')
+            loaded_model = load_model(self.path + self.file_name + '.h5')
             self.model = loaded_model
         except Exception as e:
             print(e)
             print("Couldn't load model, here's a new one")
 
     def save_model(self):
-        self.model.save(self.path + '.h5')
+        self.model.save(self.path + self.file_name + '.h5')
 
     def pre_train(self, cases):
         self.train_on_cases(cases, self.pre_train_epochs)
         self.save_model()
 
     def topp_save(self, batch):
-        topp_name = self.path + '_topp_' + str(batch)
-        self.model.save(topp_name + '.h5')
+        topp_name = self.file_name + '_topp_' + str(batch)
+        self.model.save(self.path + topp_name + '.h5')
+        return topp_name
 

@@ -17,7 +17,7 @@ class Versus:
 
         self.player_start = player_start
 
-        self.players = {1: player1, 0:player2}
+        self.players = {1: player1, 0: player2}
 
     def match(self):
         self.game.print_header()

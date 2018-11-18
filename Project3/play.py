@@ -6,7 +6,7 @@ import pickle
 
 class Play:
 
-    def __init__(self, game_kwargs, game, rollouts, player_start, batch_size, anet_kwargs, pre_train_epochs=250):
+    def __init__(self, game_kwargs, game, rollouts, player_start, batch_size, anet_kwargs, train_epochs=250):
         self.game_kwargs = game_kwargs
         self.game_kwargs['player_start'] = player_start
 
@@ -18,7 +18,7 @@ class Play:
         self.batch_size = batch_size
 
         self.anet = anet.Anet(**anet_kwargs)
-        self.pre_train_epochs = pre_train_epochs
+        self.train_epochs = train_epochs
 
     def play_game(self, topp=False, topp_k=4):
         self.game.print_header()
@@ -35,8 +35,11 @@ class Play:
 
         # Set up saving of anets throughout the run
         if topp:
+            topp_list = []
+
             topp_save_batches = []
             topp_interval = self.batch_size // (topp_k-1)
+
             for i in range(0, self.batch_size, topp_interval):
                 topp_save_batches.append(i)
             topp_save_batches.append(self.batch_size)
@@ -44,7 +47,8 @@ class Play:
         for batch in range(self.batch_size):
 
             if topp and (batch in topp_save_batches):
-                self.anet.topp_save(batch)
+                topp_name = self.anet.topp_save(batch)
+                topp_list.append(topp_name)
 
             self.game_kwargs['player_start'] = self.choose_starting_player()
             self.game = self.game_manager(**self.game_kwargs)
@@ -66,24 +70,28 @@ class Play:
                 self.game.make_actual_move(move_state)
 
             random.shuffle(rbuf)
-            self.anet.train_on_cases(rbuf)
+            self.anet.train_on_cases(rbuf, epochs=self.train_epochs)
 
             all_cases.extend(rbuf)
 
             P1_wins += self.game.winner(self.game.state)
 
-            with open(self.game.get_file_name(), 'wb') as f:
-                pickle.dump(rbuf, f)
+            print(str(batch+1) + '/' + str(self.batch_size))
+
+        with open(self.game.get_file_name(), 'wb') as f:
+            pickle.dump(all_cases, f)
 
         self.anet.accuracy(all_cases)
 
+        print('P1 wins', P1_wins, 'out of', self.batch_size, 'games (' + str(100*P1_wins/self.batch_size) + ')%')
+
         if topp:
-            self.anet.topp_save(self.batch_size)
+            topp_name = self.anet.topp_save(self.batch_size)
+            topp_list.append(topp_name)
+            return topp_list
         else:
             self.anet.save_model()
-
-
-        print('P1 wins', P1_wins, 'out of', self.batch_size, 'games (' + str(100*P1_wins/self.batch_size) + ')%')
+            return []
 
     def choose_starting_player(self):
         if self.player_start == -1:

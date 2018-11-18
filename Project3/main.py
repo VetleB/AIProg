@@ -2,6 +2,7 @@ import play
 import versus
 import hex
 import anet
+import topp
 
 def main():
 
@@ -15,30 +16,33 @@ def main():
     ###################
     # Game parameters #
     ###################
-    side_length = 3
+    side_length = 4
     rollouts = (400, 'r')   # r -> amount ; s -> seconds
     player_start = -1       # -1 -> random
     verbose = False
 
+    play_game = True
+    batch_size = 100
+    train_epochs = 250
+    topp_training = True
+    topp_k = 5
+
+    play_versus = True
+    num_versus_matches = 1000
+    pre_train = False
+    pre_train_epochs = 1
+
+    ###################
+    # Anet parameters #
+    ###################
     lrate = 0.01
-    optimizer = 'sgd'
-    haf = 'sigmoid'
+    optimizer = 'adagrad'
+    haf = 'tanh'
     oaf = 'tanh'
     loss = 'mean_squared_error'
     hidden_layers = anet_layers[side_length]
     load_existing = False
-    anet_name = 'test_topp'
-
-    play_game = True
-    batch_size = 50
-    topp_training = True
-    topp_k = 4
-
-    play_versus = False
-    num_versus_matches = 1000
-    pre_train = True
-    pre_train_epochs = 250
-
+    anet_name = None
 
 
     #########
@@ -70,20 +74,22 @@ def main():
     # Gameplay #
     ############
 
-    p = play.Play(game_kwargs, game, rollouts, player_start, batch_size, anet_kwargs=anet_kwargs)
+    p = play.Play(game_kwargs, game, rollouts, player_start, batch_size, anet_kwargs=anet_kwargs, train_epochs=train_epochs)
 
     if play_game:
-        p.play_game(topp=topp_training, topp_k=topp_k)
+        list_of_topps = p.play_game(topp=topp_training, topp_k=topp_k)
 
     if play_versus:
         anet_player = anet.Anet(**anet_kwargs)
         game_kwargs = {'side_length': side_length, 'verbose': False}
 
-        v = versus.Versus(game_kwargs, game, num_versus_matches, player_start, player1=None, player2=anet_player)
+        v = versus.Versus(game_kwargs, game, num_versus_matches, player_start, player1=anet_player, player2=None)
         if pre_train:
             anet_player.pre_train(p.get_all_cases())
         v.match()
 
+    if topp:
+        topp_ = topp.Topp()
 
 if __name__ == '__main__':
     main()

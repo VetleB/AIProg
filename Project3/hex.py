@@ -301,7 +301,7 @@ class Hex:
         print(diamond)
 
     def get_file_name(self):
-        return 'anet_cases_' + str(self.side_len) + 'x' + str(self.side_len) + '.p'
+        return 'anet_cases/anet_cases_' + str(self.side_len) + 'x' + str(self.side_len) + '.p'
 
     def get_player(self, state):
         return state[1]
