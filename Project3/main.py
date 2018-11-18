@@ -15,9 +15,9 @@ def main():
     ###################
     # Game parameters #
     ###################
-    side_length = 5
-    rollouts = (500, 'r')   # r -> amount ; s -> seconds
-    player_start = 1       # -1 -> random
+    side_length = 3
+    rollouts = (400, 'r')   # r -> amount ; s -> seconds
+    player_start = -1       # -1 -> random
     verbose = False
 
     lrate = 0.01
@@ -27,9 +27,12 @@ def main():
     loss = 'mean_squared_error'
     hidden_layers = anet_layers[side_length]
     load_existing = False
+    anet_name = 'test_topp'
 
     play_game = True
     batch_size = 50
+    topp_training = True
+    topp_k = 4
 
     play_versus = False
     num_versus_matches = 1000
@@ -47,7 +50,7 @@ def main():
 
     input_layer_size = 2*side_length**2+2
     output_size = side_length**2
-    anet_name = 'anet_' + str(side_length) + 'x' + str(side_length)
+    anet_name = 'anet_' + str(side_length) + 'x' + str(side_length) if not anet_name else anet_name
     layers = [input_layer_size]
     layers.extend(hidden_layers)
     layers.append(output_size)
@@ -70,7 +73,7 @@ def main():
     p = play.Play(game_kwargs, game, rollouts, player_start, batch_size, anet_kwargs=anet_kwargs)
 
     if play_game:
-        p.play_game()
+        p.play_game(topp=topp_training, topp_k=topp_k)
 
     if play_versus:
         anet_player = anet.Anet(**anet_kwargs)

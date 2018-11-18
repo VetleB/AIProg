@@ -20,7 +20,7 @@ class Play:
         self.anet = anet.Anet(**anet_kwargs)
         self.pre_train_epochs = pre_train_epochs
 
-    def play_game(self):
+    def play_game(self, topp=False, topp_k=4):
         self.game.print_header()
         print('They will play', self.batch_size, 'games.')
         if self.player_start == -1:
@@ -33,8 +33,19 @@ class Play:
         # Fetch cases if there are any
         all_cases = self.get_all_cases()
 
+        # Set up saving of anets throughout the run
+        if topp:
+            topp_save_batches = []
+            topp_interval = self.batch_size // (topp_k-1)
+            for i in range(0, self.batch_size, topp_interval):
+                topp_save_batches.append(i)
+            topp_save_batches.append(self.batch_size)
 
         for batch in range(self.batch_size):
+
+            if topp and (batch in topp_save_batches):
+                self.anet.topp_save(batch)
+
             self.game_kwargs['player_start'] = self.choose_starting_player()
             self.game = self.game_manager(**self.game_kwargs)
 
@@ -66,7 +77,10 @@ class Play:
 
         self.anet.accuracy(all_cases)
 
-        self.anet.save_model()
+        if topp:
+            self.anet.topp_save(self.batch_size)
+        else:
+            self.anet.save_model()
 
 
         print('P1 wins', P1_wins, 'out of', self.batch_size, 'games (' + str(100*P1_wins/self.batch_size) + ')%')

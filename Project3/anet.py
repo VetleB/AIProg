@@ -12,7 +12,9 @@ class Anet:
             ,'adam': optimizers.Adam
             ,'rms': optimizers.RMSprop}
 
+        self.anet_folder = 'saved_anets/'
         self.file_name = model_name
+        self.path = self.anet_folder + self.file_name
         self.pre_train_epochs = pre_train_epochs
         self.model = None
         if load_existing:
@@ -54,15 +56,20 @@ class Anet:
 
     def load_model(self):
         try:
-            loaded_model = load_model(self.file_name + '.h5')
+            loaded_model = load_model(self.path + '.h5')
             self.model = loaded_model
         except Exception as e:
             print(e)
             print("Couldn't load model, here's a new one")
 
     def save_model(self):
-        self.model.save(self.file_name + '.h5')
+        self.model.save(self.path + '.h5')
 
     def pre_train(self, cases):
         self.train_on_cases(cases, self.pre_train_epochs)
         self.save_model()
+
+    def topp_save(self, batch):
+        topp_name = self.path + '_topp_' + str(batch)
+        self.model.save(topp_name + '.h5')
+
