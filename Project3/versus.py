@@ -19,13 +19,14 @@ class Versus:
 
         self.players = {1: player1, 0: player2}
 
-    def match(self):
-        self.game.print_header()
-        print('They will play', self.num_matches, 'versus games.')
-        if self.player_start == -1:
-            print('Starting player is random.')
-        else:
-            print('Player', self.game.player_to_string(self.player_start), 'makes the first move.')
+    def match(self, verbose=True):
+        if verbose:
+            self.game.print_header()
+            print('They will play', self.num_matches, 'versus games.')
+            if self.player_start == -1:
+                print('Starting player is random.')
+            else:
+                print('Player', self.game.player_to_string(self.player_start), 'makes the first move.')
 
         P1_wins = 0
 
@@ -47,7 +48,11 @@ class Versus:
 
             P1_wins += self.game.winner(self.game.state)
 
-        print('P1 wins', P1_wins, 'out of', self.num_matches, 'games (' + str(100*P1_wins/self.num_matches) + ')%')
+        if verbose:
+            print('P1 wins', P1_wins, 'out of', self.num_matches, 'games (' + str(100*P1_wins/self.num_matches) + ')%')
+
+        result = (P1_wins, self.num_matches-P1_wins)
+        return result
 
 
     def choose_starting_player(self):

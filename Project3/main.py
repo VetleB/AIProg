@@ -21,18 +21,19 @@ def main():
     player_start = -1       # -1 -> random
     verbose = False
 
-    play_game = True
+    play_game = False
     batch_size = 100
-    train_epochs = 50
-    topp_training = False
+    train_epochs = 200
+    topp_training = True
     topp_k = 5
 
-    play_versus = True
+    play_versus = False
     num_versus_matches = 1000
     pre_train = False
     pre_train_epochs = 50
 
-    run_topp = False
+    run_topp = True
+    games_per_series = 25
 
     ###################
     # Anet parameters #
@@ -43,7 +44,7 @@ def main():
     oaf = 'sigmoid'
     loss = 'mean_squared_error'
     hidden_layers = anet_layers[side_length]
-    load_existing = True
+    load_existing = False
     anet_name = None
 
 
@@ -81,17 +82,21 @@ def main():
     if play_game:
         list_of_topps = p.play_game(topp=topp_training, topp_k=topp_k)
 
+    game_kwargs = {'side_length': side_length, 'verbose': False}
+
     if play_versus:
         anet_player = anet.Anet(**anet_kwargs)
-        game_kwargs = {'side_length': side_length, 'verbose': False}
 
         v = versus.Versus(game_kwargs, game, num_versus_matches, player_start, player1=anet_player, player2=None)
         if pre_train:
             anet_player.pre_train(p.get_all_cases())
         v.match()
 
-    if play_game and run_topp:
-        topp_ = topp.Topp(list_of_topps)
+    if run_topp:
+        list_of_topps = ['anet_4x4_topp_0', 'anet_4x4_topp_25', 'anet_4x4_topp_50', 'anet_4x4_topp_75', 'anet_4x4_topp_100']
+        topp_ = topp.Topp(list_of_topps, game_kwargs, game, games_per_series)
+        topp_.run_topp()
+        # topp_.display_scores()
 
 if __name__ == '__main__':
     main()
