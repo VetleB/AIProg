@@ -23,11 +23,11 @@ def main():
 
     play_game = False
     batch_size = 100
-    train_epochs = 200
+    train_epochs = 250
     topp_training = True
     topp_k = 5
 
-    play_versus = False
+    play_versus = True
     num_versus_matches = 1000
     pre_train = False
     pre_train_epochs = 50
@@ -44,8 +44,8 @@ def main():
     oaf = 'sigmoid'
     loss = 'mean_squared_error'
     hidden_layers = anet_layers[side_length]
-    load_existing = False
-    anet_name = None
+    load_existing = True
+    anet_name = 'anet_4x4_topp_100'
 
 
     #########
