@@ -17,6 +17,7 @@ class Anet:
         self.file_name = model_name
         self.pre_train_epochs = pre_train_epochs
         self.model = None
+
         if load_existing:
             self.load_model()
         if not self.model:
@@ -29,22 +30,25 @@ class Anet:
             self.model.compile(loss=loss, optimizer=optmzr, metrics=['accuracy'])
 
     def train_on_cases(self, cases, epochs=100):
-        features = numpy.array([case[0] for case in cases])
-        targets = numpy.array([case[1] for case in cases])
+        features, targets = self.feature_target(cases)
 
-        self.model.fit(features, targets, epochs=epochs, batch_size=5)
+        self.model.fit(features, targets, epochs=epochs, batch_size=5, verbose=0)
 
     def accuracy(self, cases):
-        features = numpy.array([case[0] for case in cases])
-        targets = numpy.array([case[1] for case in cases])
+        features, targets = self.feature_target(cases)
 
         scores = self.model.evaluate(features, targets)
         print("\n%s: %.2f%%" % (self.model.metrics_names[1], scores[1] * 100))
 
+    def feature_target(self, vector):
+        features = numpy.array([f_t[0] for f_t in vector])
+        targets = numpy.array([f_t[1] for f_t in vector])
+
+        return features, targets
+
     def distribution(self, state):
         state = numpy.array(state)
         prediction = self.model.predict(state)
-        #print(state, prediction)
 
         return prediction
 
@@ -65,14 +69,7 @@ class Anet:
     def save_model(self):
         self.model.save(self.path + self.file_name + '.h5')
 
-    def pre_train(self, cases):
-        random.shuffle(cases)
-        frac_of_cases = cases[0:1000]
-        self.train_on_cases(frac_of_cases, self.pre_train_epochs)
-        self.save_model()
-
     def topp_save(self, batch):
         topp_name = self.file_name + '_topp_' + str(batch)
         self.model.save(self.path + topp_name + '.h5')
         return topp_name
-

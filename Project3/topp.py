@@ -16,6 +16,7 @@ class Topp:
 
         self.agents = []
 
+        # Load all topp competitors
         for name in list_of_topps:
             agent = anet.Anet(layers=[], model_name=name, load_existing=True)
             self.agents.append(agent)
@@ -31,8 +32,8 @@ class Topp:
                 player1 = self.agents[agent1]
                 player2 = self.agents[agent2]
 
-                self.versus_match.player1 = player1
-                self.versus_match.player2 = player2
+                self.versus_match.players[1] = player1
+                self.versus_match.players[0] = player2
 
                 scores = self.versus_match.match(verbose=False)
 

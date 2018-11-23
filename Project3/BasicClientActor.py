@@ -1,10 +1,14 @@
 from BasicClientActorAbs import BasicClientActorAbs
 import math
+import anet
+import hex
 
 class BasicClientActor(BasicClientActorAbs):
     def __init__(self, IP_address = None,verbose=True):
         self.series_id = -1
         BasicClientActorAbs.__init__(self, IP_address,verbose=verbose)
+
+        self.anet = anet.Anet([], 'anet_5x5_betterer', load_existing=True)
 
     def handle_get_action(self, state):
         """
@@ -18,15 +22,11 @@ class BasicClientActor(BasicClientActorAbs):
         """
 
         # This is an example player who picks random moves. REMOVE THIS WHEN YOU ADD YOUR OWN CODE !!
-        next_move = tuple(self.pick_random_free_cell(state, size=int(math.sqrt(len(state)-1))))
+        # next_move = tuple(self.pick_random_free_cell(state, size=int(math.sqrt(len(state)-1))))
 
-        #############################
-        #
-        #
-        # YOUR CODE HERE
-        #
-        # next_move = ???
-        ##############################
+        conv_state = self.convert_state(state)
+
+        next_move = self.game.anet_choose_move(conv_state, self.anet)
 
         return next_move
 
@@ -43,13 +43,8 @@ class BasicClientActor(BasicClientActorAbs):
 
         """
         self.series_id = series_id
-        #############################
-        #
-        #
-        # YOUR CODE (if you have anything else) HERE
-        #
-        #
-        ##############################
+
+        self.game = hex.Hex(5, 0, False)
 
     def handle_game_start(self, start_player):
         """
@@ -134,7 +129,31 @@ class BasicClientActor(BasicClientActorAbs):
         print('State: ' + str(state))
         print('Action: ' + str(illegal_action))
 
+    def convert_state(self, state):
+        state_list = list(state)
+
+        player = state_list[0]
+
+        board = state_list[1:]
+
+        conv_player = 1 if player == 1 else 0
+
+        conv_board = []
+        for e in board:
+            if e == 1:
+                conv_board.append('1')
+            elif e == 2:
+                conv_board.append('0')
+            else:
+                conv_board.append('*')
+
+        conv_board = tuple(conv_board)
+
+        conv_state = (conv_board, conv_player)
+
+        return conv_state
+
 
 if __name__ ==  '__main__':
-    bsa = BasicClientActor(verbose=True)
+    bsa = BasicClientActor(verbose=False)
     bsa.connect_to_server()

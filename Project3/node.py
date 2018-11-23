@@ -18,7 +18,8 @@ class Node:
         N = self.parent.games
         num = math.log(N) if N > 1 else 1
         u = math.sqrt(num/(1+self.games))
-        return u
+        expl_factor = 5
+        return expl_factor*u
 
     def win_state(self):
         return self.game.game_over(self.state)

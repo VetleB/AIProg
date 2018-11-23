@@ -34,16 +34,17 @@ class Versus:
             self.game_kwargs['player_start'] = self.choose_starting_player()
             self.game = self.game_manager(**self.game_kwargs)
 
+            # Play game
             while not self.game.actual_game_over():
                 player = self.players[self.game.get_player(self.game.state)]
-                if (isinstance(player, anet.Anet)):
+                if isinstance(player, anet.Anet):
                     move_state = self.game.anet_choose_child(self.game.state, player)
-                elif player=='human':
+                elif player == 'human':
                     move_state = self.game.request_human_move(self.game.state)
                 # If no player given, make random moves
                 else:
                     move_state = self.game.request_random_move(self.game.state)
-                # Make actual move
+                # Make the move chosen by player
                 self.game.make_actual_move(move_state)
 
             P1_wins += self.game.winner(self.game.state)
@@ -53,7 +54,6 @@ class Versus:
 
         result = (P1_wins, self.num_matches-P1_wins)
         return result
-
 
     def choose_starting_player(self):
         if self.player_start == -1:

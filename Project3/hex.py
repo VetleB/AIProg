@@ -28,6 +28,7 @@ class Hex:
         state_list = list(state[0])
         player = state[1]
 
+        # Create children by making every legal move on current board with current player
         for i in range(len(state_list)):
             if state_list[i] == '*':
                 child_list = state_list[:]
@@ -40,34 +41,32 @@ class Hex:
         return child_state_list
 
     def make_actual_move(self, state):
-        moving_player = self.player_to_string(self.state[1])
-
-        move = None
-        board = self.state_deepen(self.state)
-        new_board = self.state_deepen(state)
-        for i in range(self.side_len):
-            for j in range(self.side_len):
-                if board[i][j] != new_board[i][j]:
-                    move = (i, j)
-
         if self.verbose:
-            print(moving_player, "placed a stone in position", move)
-            self.print_hex(state)
+            self.print_move(state)
 
         self.state = state
-
 
     def get_move(self, pre_state, post_state):
         move = None
         board = self.state_deepen(pre_state)
         new_board = self.state_deepen(post_state)
+
+        # Figure out move based on difference in states
         for i in range(self.side_len):
             for j in range(self.side_len):
                 if board[i][j] != new_board[i][j]:
                     move = (i, j)
-
         return move
 
+    def print_move(self, state):
+        moving_player = self.player_to_string(self.state[1])
+
+        move = self.get_move(self.state, state)
+
+        print(moving_player, "placed a stone in position", move)
+        self.print_hex(state)
+
+    # Get move as index usable in lists, etc.
     def get_move_index(self, pre_state, post_state):
 
         move = self.get_move(pre_state, post_state)
@@ -78,13 +77,13 @@ class Hex:
         return [0 for i in range(self.side_len**2)]
 
     def case_to_nn_feature(self, case):
-
         nn_board_flat = self.state_to_nn_state(case[0])
 
         label = case[1]
 
         return [nn_board_flat, label]
 
+    # Convert game state into feature usable by anet
     def state_to_nn_state(self, state):
         nn_board_positions = {
             '*': [0,0] # Empty
@@ -108,25 +107,38 @@ class Hex:
 
         return nn_board_flat
 
-
-    # TODO: Fix this shit, in the act of eliminating invalid moves, it all turns into 0
+    # Have an anet choose a child
     def anet_choose_child(self, state, anet):
+        position = self.move_index(state, anet)
+        return self.make_move(state, position)
+
+    # Turn move index into co-ordinates (to be used for online tournament)
+    def anet_choose_move(self, state, anet):
+        move_indx = self.move_index(state, anet)
+
+        row = move_indx//self.side_len
+        column = move_indx%self.side_len
+
+        move = (row, column)
+
+        return move
+
+    # Based on argument state, return index of move anet wants to make
+    def move_index(self, state, anet):
         distribution = anet.distribution([self.state_to_nn_state(state)])
         distribution = list(distribution)[0]
-        # print(state, distribution)
         board = list(state[0])
 
-        #print(distribution)
+        # Make illegal moves 0
         for i in range(len(board)):
             if board[i] != '*':
                 distribution[i] = 0
 
-        #print(board, distribution)
-
         distribution = anet.normalize(distribution)
         position = distribution.index(max(distribution))
-        return self.make_move(state, position)
+        return position
 
+    # Based on a state and a move (as index), return the resulting state after making the move
     def make_move(self, state, move):
         board = list(state[0])
 
@@ -138,10 +150,12 @@ class Hex:
 
     def request_human_move(self, state):
         move = input("Move: ")
+
         if move == '':
             return self.request_random_move(state)
         else:
             move = int(move)
+
         while state[0][move] != '*':
             print('Invalid move')
             move = input("Move: ")
@@ -149,6 +163,7 @@ class Hex:
                 return self.request_random_move(state)
             else:
                 move = int(move)
+
         return self.make_move(state, move)
 
     def request_random_move(self, state):
@@ -181,14 +196,13 @@ class Hex:
         new_state = (state[0], new_player)
         return new_state
 
+    # Check if a state is an end state
     def game_over(self, state):
 
         if state.count('*') > self.side_len**2 - ((2*self.side_len)-1):
             return False
 
         board = self.state_deepen(state)
-
-        #self.print_hex(state)
 
         for i in range(self.side_len):
             # Check for red victory
@@ -207,7 +221,9 @@ class Hex:
 
         return False
 
+    # Perform a breadth-first search to check if a player has connected their sides
     def bfs(self, board, root, player):
+        # Possible directions a connection can be made in
         dirs = [(-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0)]
 
         row_or_col = 0 if player == 1 else 1
@@ -215,6 +231,7 @@ class Hex:
         queue = deque()
         queue.append(root)
         test_board = board[:]
+        # root = (x, y)
         test_board[root[0]][root[1]] = '*'
 
         while len(queue):
@@ -227,13 +244,17 @@ class Hex:
                     x = root[0] + direction[0]
                     y = root[1] + direction[1]
 
+                    # To avoid negative indices, as these would start fetching stuff from the end
                     if x < 0 or y < 0:
                         invalid = True
 
                     if test_board[x][y] == str(player) and not invalid:
                         pos = (x, y)
+
+                        # Check if reached other side
                         if pos[row_or_col] == self.side_len-1:
                             return True, test_board
+
                         queue.append(pos)
                         test_board[x][y] = '*'
                 except IndexError:
@@ -241,6 +262,7 @@ class Hex:
 
         return False, test_board
 
+    # Turn 1D list into 2D
     def state_deepen(self, state):
         board = []
 
@@ -253,6 +275,7 @@ class Hex:
 
         return board
 
+    # Combines q and u value depending on which player is being evaluated, in order to do max(value) when comparing moves
     def player_value(self, state, q, u, expl=True):
         u = u if expl else 0
         if state[1] == 1:
