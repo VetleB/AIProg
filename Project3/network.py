@@ -5,11 +5,12 @@ import time
 
 class Tree:
 
-    def __init__(self, root, game, anet):
+    def __init__(self, root, game, anet, epsilon=0.1):
         self.root = node.Node(root, None, game)
         self.tree = {root: self.root}
         self.game = game
         self.anet = anet
+        self.epsilon = epsilon
 
     def simulate_game(self, state, rollouts):
         root = self.tree[state]
@@ -105,11 +106,12 @@ class Tree:
         state = leaf_node.state
 
         while not self.game.game_over(state):
-            state = self.game.anet_choose_child(state, self.anet)
-
-            # options = self.game.generate_child_states(state)
-            # choice = random.choice(options)
-            # state = choice
+            if random.random() > self.epsilon:
+                state = self.game.anet_choose_child(state, self.anet)
+            else:
+                options = self.game.generate_child_states(state)
+                choice = random.choice(options)
+                state = choice
 
         return state
 

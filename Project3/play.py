@@ -6,7 +6,7 @@ import pickle
 
 class Play:
 
-    def __init__(self, game_kwargs, game, rollouts, player_start, batch_size, rbuf_mbs, anet_kwargs, train_epochs=250):
+    def __init__(self, game_kwargs, game, rollouts, player_start, batch_size, rbuf_mbs, anet_kwargs, train_epochs=250, epsilon=0.1):
         self.game_kwargs = game_kwargs
         self.game_kwargs['player_start'] = player_start
 
@@ -15,6 +15,7 @@ class Play:
 
         self.player_start = player_start
         self.rollouts = rollouts
+        self.epsilon = epsilon
         self.batch_size = batch_size
         self.rbuf_mbs = rbuf_mbs
 
@@ -59,7 +60,7 @@ class Play:
 
             # Initialize game and MC tree
             self.game = self.game_manager(**self.game_kwargs)
-            tree = network.Tree(self.game.get_initial_state(), self.game, self.anet)
+            tree = network.Tree(self.game.get_initial_state(), self.game, self.anet, self.epsilon)
 
             while not self.game.actual_game_over():
                 # Perform tree searches, rollouts and backprops

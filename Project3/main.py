@@ -20,12 +20,13 @@ def main():
     ###################
     # Game parameters #
     ###################
-    side_length = 5
-    rollouts = (400, 'r')   # r -> amount ; s -> seconds
+    side_length = 4
+    rollouts = (50, 'r')   # r -> amount ; s -> seconds
+    epsilon = 0.1
     player_start = -1       # -1 -> random
     verbose = False
 
-    play_game = False
+    play_game = True
     batch_size = 8
     train_epochs = 200
     rbuf_mbs = 64
@@ -38,10 +39,10 @@ def main():
     pre_train_epochs = 1
     pre_train_max_amount = 2000
 
-    run_topp = False
+    run_topp = True
     games_per_series = 20
 
-    run_good_topp = True
+    run_good_topp = False
 
     ###################
     # Anet parameters #
@@ -53,7 +54,7 @@ def main():
     loss = 'mean_absolute_error'
     hidden_layers = anet_layers[side_length]
     load_existing = True
-    anet_name = "anet_5x5"
+    anet_name = None
 
 
     #########
@@ -61,7 +62,8 @@ def main():
     #########
 
     game = hex.Hex
-    game_kwargs = {'side_length': side_length, 'verbose': verbose}
+    game_kwargs = {'side_length': side_length
+                   , 'verbose': verbose}
 
     list_of_topps = []
 
@@ -72,14 +74,14 @@ def main():
     layers.extend(hidden_layers)
     layers.append(output_size)
     anet_kwargs = {'layers': layers
-        , 'haf': haf
-        , 'oaf': oaf
-        , 'loss': loss
-        , 'optimizer': optimizer
-        , 'lrate': lrate
-        , 'model_name': anet_name
-        , 'pre_train_epochs': pre_train_epochs
-        , 'load_existing': load_existing}
+                   , 'haf': haf
+                   , 'oaf': oaf
+                   , 'loss': loss
+                   , 'optimizer': optimizer
+                   , 'lrate': lrate
+                   , 'model_name': anet_name
+                   , 'pre_train_epochs': pre_train_epochs
+                   , 'load_existing': load_existing}
 
 
 
@@ -87,12 +89,12 @@ def main():
     # Gameplay #
     ############
 
-    p = play.Play(game_kwargs, game, rollouts, player_start, batch_size, rbuf_mbs, anet_kwargs=anet_kwargs, train_epochs=train_epochs)
+    p = play.Play(game_kwargs, game, rollouts, player_start, batch_size, rbuf_mbs, anet_kwargs=anet_kwargs, train_epochs=train_epochs, epsilon=epsilon)
 
     if play_game:
         list_of_topps = p.play_game(topp=topp_training, topp_k=topp_k)
 
-    #game_kwargs = {'side_length': side_length, 'verbose': False}
+    #game_kwargs['verbose'] = False
 
     if play_versus:
         anet_player = anet.Anet(**anet_kwargs)
@@ -110,12 +112,7 @@ def main():
         list_of_topps = list_of_topps if list_of_topps else ['anet_5x5_topp_0', 'anet_5x5_topp_50', 'anet_5x5_topp_100', 'anet_5x5_topp_150', 'anet_5x5_topp_200']
         topp_ = topp.Topp(list_of_topps, game_kwargs, game, games_per_series)
 
-        # an = topp_.agents[-1]
-        # v.player1 = an
-        # v.match()
-
         topp_.run_topp()
-        # topp_.display_scores()
 
     if run_good_topp:
         list_of_topps = ['anet_5x5_topp_0', 'anet_5x5_topp_50', 'anet_5x5_topp_100', 'anet_5x5_topp_150', 'anet_5x5_topp_200']
