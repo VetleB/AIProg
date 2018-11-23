@@ -66,8 +66,9 @@ class Anet:
             print(e)
             print("Couldn't load model, here's a new one")
 
-    def save_model(self):
-        self.model.save(self.path + self.file_name + '.h5')
+    def save_model(self, name=None):
+        file_name = name if name else self.file_name
+        self.model.save(self.path + file_name + '.h5')
 
     def topp_save(self, batch):
         topp_name = self.file_name + '_topp_' + str(batch)

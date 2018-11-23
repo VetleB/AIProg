@@ -8,7 +8,7 @@ class BasicClientActor(BasicClientActorAbs):
         self.series_id = -1
         BasicClientActorAbs.__init__(self, IP_address,verbose=verbose)
 
-        self.anet = anet.Anet([], 'anet_5x5_betterer', load_existing=True)
+        self.anet = anet.Anet([], 'anet_5x5_real_good', load_existing=True)
 
     def handle_get_action(self, state):
         """

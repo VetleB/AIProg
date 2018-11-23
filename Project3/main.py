@@ -21,25 +21,27 @@ def main():
     # Game parameters #
     ###################
     side_length = 5
-    rollouts = (500, 'r')   # r -> amount ; s -> seconds
+    rollouts = (400, 'r')   # r -> amount ; s -> seconds
     player_start = -1       # -1 -> random
     verbose = False
 
-    play_game = True
-    batch_size = 200
-    train_epochs = 1
+    play_game = False
+    batch_size = 8
+    train_epochs = 200
     rbuf_mbs = 64
     topp_training = True
     topp_k = 5
 
-    play_versus = True
+    play_versus = False
     num_versus_matches = 1000
-    pre_train = True
+    pre_train = False
     pre_train_epochs = 1
     pre_train_max_amount = 2000
 
-    run_topp = True
+    run_topp = False
     games_per_series = 20
+
+    run_good_topp = True
 
     ###################
     # Anet parameters #
@@ -50,8 +52,8 @@ def main():
     oaf = 'sigmoid'
     loss = 'mean_absolute_error'
     hidden_layers = anet_layers[side_length]
-    load_existing = False
-    anet_name = None
+    load_existing = True
+    anet_name = "anet_5x5"
 
 
     #########
@@ -90,7 +92,7 @@ def main():
     if play_game:
         list_of_topps = p.play_game(topp=topp_training, topp_k=topp_k)
 
-    game_kwargs = {'side_length': side_length, 'verbose': False}
+    #game_kwargs = {'side_length': side_length, 'verbose': False}
 
     if play_versus:
         anet_player = anet.Anet(**anet_kwargs)
@@ -105,7 +107,7 @@ def main():
         v.match()
 
     if run_topp:
-        list_of_topps = list_of_topps if list_of_topps else ['anet_4x4_topp_0', 'anet_4x4_topp_25', 'anet_4x4_topp_50', 'anet_4x4_topp_75', 'anet_4x4']
+        list_of_topps = list_of_topps if list_of_topps else ['anet_5x5_topp_0', 'anet_5x5_topp_50', 'anet_5x5_topp_100', 'anet_5x5_topp_150', 'anet_5x5_topp_200']
         topp_ = topp.Topp(list_of_topps, game_kwargs, game, games_per_series)
 
         # an = topp_.agents[-1]
@@ -114,6 +116,12 @@ def main():
 
         topp_.run_topp()
         # topp_.display_scores()
+
+    if run_good_topp:
+        list_of_topps = ['anet_5x5_topp_0', 'anet_5x5_topp_50', 'anet_5x5_topp_100', 'anet_5x5_topp_150', 'anet_5x5_topp_200']
+        topp_ = topp.Topp(list_of_topps, game_kwargs, game, games_per_series)
+        topp_.run_topp()
+
 
 if __name__ == '__main__':
     main()
